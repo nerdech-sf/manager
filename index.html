@@ -1,0 +1,1782 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI PM補佐システム · nerdech</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&family=Noto+Sans+JP:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ─── Reusable inline SVG icons (defs only) ─── -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- 18 viewBox monoline -->
+    <symbol id="i-today" viewBox="0 0 18 18">
+      <rect x="3" y="4" width="12" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M3 7.5h12M6.5 2.5v3M11.5 2.5v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      <circle cx="9" cy="11" r="1.2" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-todo" viewBox="0 0 18 18">
+      <rect x="3" y="3" width="12" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M6 9l2 2 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </symbol>
+    <symbol id="i-cases" viewBox="0 0 18 18">
+      <rect x="2.5" y="5" width="13" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M6 5V4a1 1 0 011-1h4a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+      <path d="M2.5 9h13" stroke="currentColor" stroke-width="1.3"/>
+    </symbol>
+    <symbol id="i-files" viewBox="0 0 18 18">
+      <path d="M4 3h5l2 2.5h3v8.5a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-perm" viewBox="0 0 18 18">
+      <path d="M9 2.5L3.5 5v4c0 3.5 2.4 5.7 5.5 6.5 3.1-.8 5.5-3 5.5-6.5V5L9 2.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M7 9l1.5 1.5L11.5 7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </symbol>
+    <symbol id="i-bill" viewBox="0 0 18 18">
+      <path d="M4 2.5h10v13l-2-1.2L10 15.4 8 14.3 6 15.4l-2-1.2V2.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M6.5 6h5M6.5 9h5M6.5 12h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-log" viewBox="0 0 18 18">
+      <circle cx="9" cy="9" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M9 5v4l2.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="i-set" viewBox="0 0 18 18">
+      <circle cx="9" cy="9" r="2.2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M9 2.2v1.6M9 14.2v1.6M14.2 9h1.6M2.2 9h1.6M13 5l1.1-1.1M3.9 14.1L5 13M13 13l1.1 1.1M3.9 3.9L5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-bell" viewBox="0 0 18 18">
+      <path d="M9 2.5c-2.5 0-4.5 2-4.5 4.5v3.5L3 12.5h12L13.5 10.5V7c0-2.5-2-4.5-4.5-4.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+      <path d="M7.5 14.5a1.5 1.5 0 003 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+    </symbol>
+    <symbol id="i-sparkle" viewBox="0 0 14 14">
+      <path d="M7 8.5C6.75 7.65 6.4 7 5.9 6.5C5.35 5.95 4.6 5.58 3.65 5.34C4.6 5.1 5.34 4.73 5.89 4.18C6.39 3.68 6.74 3.04 6.98 2.2C7.21 3.09 7.56 3.81 8.07 4.36C8.56 4.89 9.18 5.24 9.95 5.46C9.21 5.68 8.6 6.03 8.13 6.5C7.59 7.04 7.23 7.72 7 8.5Z" fill="currentColor"/>
+      <path d="M11.5 11.5l.4-1 .4 1 1 .4-1 .4-.4 1-.4-1-1-.4 1-.4z" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-arrow" viewBox="0 0 14 14">
+      <path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 14 14">
+      <circle cx="6.2" cy="6.2" r="3.8" fill="none" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M9 9l2.8 2.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 14 14">
+      <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-cal" viewBox="0 0 14 14">
+      <rect x="2.5" y="3.5" width="9" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <path d="M2.5 5.5h9M5 2.5v2M9 2.5v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 14 14">
+      <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <path d="M7 4.2V7l1.8 1.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-user" viewBox="0 0 14 14">
+      <circle cx="7" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <path d="M2.8 11.5c.6-2.1 2.3-3.2 4.2-3.2s3.6 1.1 4.2 3.2" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-arrow-r" viewBox="0 0 14 14">
+      <path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </symbol>
+    <symbol id="i-filter" viewBox="0 0 14 14">
+      <path d="M2 3h10l-3.5 4.5v4l-3-1.5v-2.5L2 3z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="i-sort" viewBox="0 0 14 14">
+      <path d="M4 2.5v9M2 4.5L4 2.5l2 2M10 11.5v-9M8 9.5l2 2 2-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </symbol>
+    <symbol id="i-export" viewBox="0 0 14 14">
+      <path d="M7 9.5V2.5M4.5 5l2.5-2.5L9.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <path d="M2.5 9v2c0 .55.45 1 1 1h7c.55 0 1-.45 1-1V9" stroke="currentColor" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="app">
+
+  <!-- ─── Header ─── -->
+  <header class="header">
+    <div class="logo-area">
+      <div class="logo-mark">N</div>
+      <div class="logo-word">
+        <span class="logo-name">TechClaw</span>
+        <span class="logo-sub">AI PM SUITE</span>
+      </div>
+    </div>
+
+    <div class="search-bar" id="searchBar" onclick="openChatbot()">
+      <svg class="search-sparkle" width="13" height="13"><use href="#i-sparkle"/></svg>
+      <span class="search-placeholder" id="searchPlaceholder">案件・TODO・ファイルをAIに尋ねる…</span>
+      <span class="search-kbd" id="searchKbd">⌘&nbsp;K</span>
+      <span class="search-plus" id="searchPlus">
+        <svg width="11" height="11" stroke="white"><use href="#i-plus"/></svg>
+      </span>
+    </div>
+
+    <div class="header-right">
+      <button class="icon-btn" id="notifBtn" onclick="toggleActivity()" title="通知 / Activity Log">
+        <svg width="16" height="16"><use href="#i-bell"/></svg>
+        <span class="dot"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Workspace ─── -->
+  <div class="workspace">
+
+    <!-- ─── Sidebar ─── -->
+    <aside class="sidebar" id="sidebar">
+      <nav class="nav-list">
+
+        <div class="nav-section">Desk</div>
+
+        <div class="nav-item active" data-page="today" onclick="navClick(this)">
+          <span class="nav-ico"><svg width="16" height="16"><use href="#i-today"/></svg></span>
+          <span class="nav-label">Today</span>
+          <span class="nav-badge">6</span>
+          <span class="tip">Today / 司令塔</span>
+        </div>
+
+        <div class="nav-item" data-page="todo" onclick="navClick(this)">
+          <span class="nav-ico"><svg width="16" height="16"><use href="#i-todo"/></svg></span>
+          <span class="nav-label">TODO</span>
+          <span class="nav-badge">17</span>
+          <span class="tip">TODO・リマインド</span>
+        </div>
+
+        <div class="nav-item" data-page="files" onclick="navClick(this)">
+          <span class="nav-ico"><svg width="16" height="16"><use href="#i-files"/></svg></span>
+          <span class="nav-label">ファイル</span>
+          <span class="nav-badge">142</span>
+          <span class="tip">ファイル・ナレッジ</span>
+        </div>
+
+        <div class="nav-section">Operations</div>
+
+        <div class="nav-item" data-page="perm" onclick="navClick(this)">
+          <span class="nav-ico"><svg width="16" height="16"><use href="#i-perm"/></svg></span>
+          <span class="nav-label">権限</span>
+          <span class="nav-badge">7</span>
+          <span class="tip">ユーザー・権限</span>
+        </div>
+
+        <div class="nav-item" data-page="settings" onclick="navClick(this)">
+          <span class="nav-ico"><svg width="16" height="16"><use href="#i-set"/></svg></span>
+          <span class="nav-label">設定</span>
+          <span class="nav-badge">AI</span>
+          <span class="tip">AI実行レベル・承認</span>
+        </div>
+
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="user-avatar">山</div>
+          <div class="user-meta">
+            <span class="user-name">山田 太郎</span>
+            <span class="user-role">PM · nerdech</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ─── Main Content ─── -->
+    <main class="main-content">
+
+      <!-- ════════ TODAY ════════ -->
+      <div id="page-today" class="page active">
+
+        <div class="page-head">
+          <div class="page-title-wrap">
+            <h1 class="page-title">ホーム / 司令塔</h1>
+          </div>
+          <div class="page-actions">
+            <button class="btn">
+              <svg width="12" height="12"><use href="#i-cal"/></svg>
+              今週ビュー
+            </button>
+          </div>
+        </div>
+
+        <!-- AI PM Report -->
+        <section class="ai-report">
+          <div class="ai-report-top">
+            <div class="ai-report-eyebrow"><span class="pulse"></span> AI PM Report</div>
+            <div class="ai-report-meta">生成 22:10 / 引用 6件 · ログ 18件</div>
+          </div>
+          <div class="ai-report-body">
+            本日対応すべき案件 <strong>6件</strong>、うち遅延 <strong>2件</strong>。進捗報告から抽出した確認事項を整理し、<strong>連絡ドラフト 3件</strong>を準備しました。<strong>承認待ち 3件</strong>は人間承認が必要です（顧客送信2 / 請求確定1）。直近で 売上影響 <strong>¥1,240,000</strong> の入金期限が4件中2件未消化。
+          </div>
+          <div class="ai-report-stats">
+            <div class="stat-item">
+              <span class="stat-label">対応案件</span>
+              <div class="stat-row"><span class="stat-num">6</span><span class="stat-unit">/ 24</span></div>
+              <span class="stat-delta">+2 vs. 昨日</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">承認待ち</span>
+              <div class="stat-row"><span class="stat-num">3</span><span class="stat-unit">件</span></div>
+              <span class="stat-delta down">最古 2日</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">遅延 / 注意</span>
+              <div class="stat-row"><span class="stat-num">5</span><span class="stat-unit">件</span></div>
+              <span class="stat-delta down">+1 vs. 先週</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">未請求 / 入金待</span>
+              <div class="stat-row"><span class="stat-num">4</span><span class="stat-unit">件</span></div>
+              <span class="stat-delta flat">¥1.24M</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">AIドラフト</span>
+              <div class="stat-row"><span class="stat-num">7</span><span class="stat-unit">下書き</span></div>
+              <span class="stat-delta flat">Lv2 設定</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 案件 注意案件 -->
+        <section class="panel cases-section">
+          <div class="panel-head">
+            <h2 class="panel-title">注意案件</h2>
+            <span class="panel-count warn">5件</span>
+            <span class="panel-more" onclick="navByKey('todo')">VIEW ALL →</span>
+          </div>
+          <div class="cases-grid">
+
+            <!-- card 1 -->
+            <article class="case-card" data-h="delay">
+              <div class="case-top">
+                <span class="case-id">C-2024-011</span>
+                <span class="case-meta-dot"></span>
+                <span class="case-status-pill">進行中</span>
+                <span class="badge badge-delay">遅延 · 5日超</span>
+              </div>
+              <div>
+                <div class="case-title">美容室予約システム MVP 開発</div>
+                <div class="case-client">株式会社 BloomSalon · 田中 健一郎 様</div>
+              </div>
+              <div class="case-row">
+                <svg width="13" height="13"><use href="#i-clock"/></svg>
+                <span class="label">納期</span>
+                <span class="val">05.20 (火) — <strong>残 4日</strong></span>
+              </div>
+              <div class="case-next-action">
+                <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+                <div><strong>次アクション:</strong> 田中様から仕様確認の返信が3日未着。AIが催促ドラフトを作成済み。</div>
+              </div>
+              <div class="case-footer">
+                <div class="avatars">
+                  <div class="avatar-circle">山</div>
+                  <div class="avatar-circle warm">佐</div>
+                  <div class="avatar-circle olive">鈴</div>
+                </div>
+                <div class="case-foot-right">
+                  <span class="case-deadline urgent">¥780,000</span>
+                  <span>·</span>
+                  <span>承認 1件</span>
+                </div>
+              </div>
+            </article>
+
+            <!-- card 2 -->
+            <article class="case-card" data-h="risk">
+              <div class="case-top">
+                <span class="case-id">C-2024-017</span>
+                <span class="case-meta-dot"></span>
+                <span class="case-status-pill">顧客確認待ち</span>
+                <span class="badge badge-risk">遅延リスク</span>
+              </div>
+              <div>
+                <div class="case-title">EC サイト保守・決済不具合調査</div>
+                <div class="case-client">グレイス商会 株式会社 · 経営企画室</div>
+              </div>
+              <div class="case-row">
+                <svg width="13" height="13"><use href="#i-clock"/></svg>
+                <span class="label">納期</span>
+                <span class="val">05.18 (日) — <strong>残 2日</strong></span>
+              </div>
+              <div class="case-next-action">
+                <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+                <div><strong>次アクション:</strong> 顧客確認待ち3日。AIが進捗まとめ＋検収依頼の下書きを準備。</div>
+              </div>
+              <div class="case-footer">
+                <div class="avatars">
+                  <div class="avatar-circle">山</div>
+                  <div class="avatar-circle cool">高</div>
+                </div>
+                <div class="case-foot-right">
+                  <span class="case-deadline">¥320,000</span>
+                  <span>·</span>
+                  <span>TODO 4</span>
+                </div>
+              </div>
+            </article>
+
+            <!-- card 3 -->
+            <article class="case-card" data-h="good">
+              <div class="case-top">
+                <span class="case-id">C-2024-022</span>
+                <span class="case-meta-dot"></span>
+                <span class="case-status-pill">納品準備中</span>
+                <span class="badge badge-good">良好</span>
+              </div>
+              <div>
+                <div class="case-title">採用支援 LP 制作 (フェーズ2)</div>
+                <div class="case-client">株式会社 オリオン人事 · 採用部</div>
+              </div>
+              <div class="case-row">
+                <svg width="13" height="13"><use href="#i-clock"/></svg>
+                <span class="label">納期</span>
+                <span class="val">05.22 (木) — <strong>残 6日</strong></span>
+              </div>
+              <div class="case-next-action">
+                <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+                <div><strong>次アクション:</strong> 予定通り進行中。最終確認用ステージング URL を金曜に送付予定。</div>
+              </div>
+              <div class="case-footer">
+                <div class="avatars">
+                  <div class="avatar-circle warm">佐</div>
+                  <div class="avatar-circle olive">鈴</div>
+                </div>
+                <div class="case-foot-right">
+                  <span class="case-deadline">¥540,000</span>
+                  <span>·</span>
+                  <span>TODO 2</span>
+                </div>
+              </div>
+            </article>
+
+            <!-- card 4 -->
+            <article class="case-card" data-h="fire">
+              <div class="case-top">
+                <span class="case-id">C-2024-006</span>
+                <span class="case-meta-dot"></span>
+                <span class="case-status-pill">炎上注意</span>
+                <span class="badge badge-fire">顧客不満</span>
+              </div>
+              <div>
+                <div class="case-title">在庫管理 SaaS 機能追加</div>
+                <div class="case-client">ハマノ機材 株式会社 · 浜野 雅之 様</div>
+              </div>
+              <div class="case-row">
+                <svg width="13" height="13"><use href="#i-clock"/></svg>
+                <span class="label">納期</span>
+                <span class="val">05.15 (木) — <strong>超過 1日</strong></span>
+              </div>
+              <div class="case-next-action">
+                <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+                <div><strong>次アクション:</strong> 顧客から「対応が遅い」とのメッセージ。AIがお詫び＋対策方針ドラフト作成済。<strong>要承認</strong>。</div>
+              </div>
+              <div class="case-footer">
+                <div class="avatars">
+                  <div class="avatar-circle">山</div>
+                  <div class="avatar-circle warm">佐</div>
+                </div>
+                <div class="case-foot-right">
+                  <span class="case-deadline urgent">¥1,200,000</span>
+                  <span>·</span>
+                  <span>承認 1件</span>
+                </div>
+              </div>
+            </article>
+
+            <!-- card 5 -->
+            <article class="case-card" data-h="risk">
+              <div class="case-top">
+                <span class="case-id">C-2024-019</span>
+                <span class="case-meta-dot"></span>
+                <span class="case-status-pill">入金待ち</span>
+                <span class="badge badge-risk">入金期限超過</span>
+              </div>
+              <div>
+                <div class="case-title">業務管理ツール導入支援</div>
+                <div class="case-client">サクラ印刷 株式会社 · 経理部</div>
+              </div>
+              <div class="case-row">
+                <svg width="13" height="13"><use href="#i-bill"/></svg>
+                <span class="label">支払期限</span>
+                <span class="val">05.10 (土) — <strong>超過 6日</strong></span>
+              </div>
+              <div class="case-next-action">
+                <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+                <div><strong>次アクション:</strong> 入金未確認。AIが入金リマインド文の下書きを作成。バックオフィス確認後送付。</div>
+              </div>
+              <div class="case-footer">
+                <div class="avatars">
+                  <div class="avatar-circle cool">高</div>
+                </div>
+                <div class="case-foot-right">
+                  <span class="case-deadline urgent">¥460,000</span>
+                  <span>·</span>
+                  <span>INV-2026-031</span>
+                </div>
+              </div>
+            </article>
+
+            <!-- card 6 -->
+            <article class="case-card" data-h="hold">
+              <div class="case-top">
+                <span class="case-id">C-2024-024</span>
+                <span class="case-meta-dot"></span>
+                <span class="case-status-pill">保留中</span>
+                <span class="badge badge-hold">素材待ち</span>
+              </div>
+              <div>
+                <div class="case-title">コーポレートサイト リニューアル</div>
+                <div class="case-client">合同会社 ヤワラギ建築 · 広報担当</div>
+              </div>
+              <div class="case-row">
+                <svg width="13" height="13"><use href="#i-clock"/></svg>
+                <span class="label">再開予定</span>
+                <span class="val">05.25 (月) — 顧客側都合</span>
+              </div>
+              <div class="case-next-action">
+                <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+                <div><strong>次アクション:</strong> 写真素材5点の納品待ち。5/22 (金) に確認連絡をスケジュール済み。</div>
+              </div>
+              <div class="case-footer">
+                <div class="avatars">
+                  <div class="avatar-circle olive">鈴</div>
+                </div>
+                <div class="case-foot-right">
+                  <span class="case-deadline">¥860,000</span>
+                  <span>·</span>
+                  <span>TODO 1</span>
+                </div>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+        <div class="dash-grid">
+
+          <!-- LEFT column removed (今日のTODO・時系列ログ削除) -->
+
+          <!-- RIGHT column -->
+          <div>
+
+            <!-- 承認待ち -->
+            <section class="panel" style="margin-bottom:18px">
+              <div class="panel-head">
+                <h2 class="panel-title">承認待ち</h2>
+                <span class="panel-count warn">3件</span>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">お詫び＋対策方針メール · 浜野様</div>
+                  <div class="list-row-sub">
+                    <span class="tag">C-006</span>
+                    <span>外部送信 · 顧客向け</span>
+                    <span class="dot"></span>
+                    <span>AI Lv2 ドラフト</span>
+                  </div>
+                </div>
+                <div class="list-row-right urgent">待 4h</div>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">仕様確認の催促連絡 · 田中様</div>
+                  <div class="list-row-sub">
+                    <span class="tag">C-011</span>
+                    <span>外部送信 · 顧客向け</span>
+                  </div>
+                </div>
+                <div class="list-row-right urgent">待 1日</div>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">INV-2026-031 請求書 PDF (¥460,000)</div>
+                  <div class="list-row-sub">
+                    <span class="tag">C-019</span>
+                    <span>請求書発行</span>
+                    <span class="dot"></span>
+                    <span>backoffice 起票</span>
+                  </div>
+                </div>
+                <div class="list-row-right urgent">待 2日</div>
+              </div>
+            </section>
+
+            <!-- 未返信 / 確認待ち -->
+            <section class="panel" style="margin-bottom:18px">
+              <div class="panel-head">
+                <h2 class="panel-title">未返信・確認待ち</h2>
+                <span class="panel-count">4件</span>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">仕様確認の返信 · 田中様</div>
+                  <div class="list-row-sub"><span class="tag">C-011</span><span>送付 5/13</span></div>
+                </div>
+                <div class="list-row-right urgent">3日</div>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">検収確認 · グレイス商会</div>
+                  <div class="list-row-sub"><span class="tag">C-017</span><span>送付 5/13</span></div>
+                </div>
+                <div class="list-row-right urgent">3日</div>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">素材納品の確認 · ヤワラギ建築</div>
+                  <div class="list-row-sub"><span class="tag">C-024</span><span>送付 5/8</span></div>
+                </div>
+                <div class="list-row-right">8日</div>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">入金確認 · サクラ印刷</div>
+                  <div class="list-row-sub"><span class="tag">C-019</span><span>期限 5/10</span></div>
+                </div>
+                <div class="list-row-right urgent">6日</div>
+              </div>
+            </section>
+
+            <!-- 請求 / 入金 -->
+            <section class="panel">
+              <div class="panel-head">
+                <h2 class="panel-title">請求 / 入金</h2>
+                <span class="panel-count">4件</span>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">INV-2026-031 · サクラ印刷 · ¥460,000</div>
+                  <div class="list-row-sub"><span class="tag">C-019</span><span>入金待ち</span><span class="dot"></span><span>6日超過</span></div>
+                </div>
+                <div class="list-row-right urgent">超過</div>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">INV-2026-032 · ハマノ機材 · ¥1,200,000</div>
+                  <div class="list-row-sub"><span class="tag">C-006</span><span>請求前</span><span class="dot"></span><span>要起票</span></div>
+                </div>
+                <div class="list-row-right urgent">要対応</div>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">INV-2026-033 · オリオン人事 · ¥540,000</div>
+                  <div class="list-row-sub"><span class="tag">C-022</span><span>納品後</span><span class="dot"></span><span>起票予定</span></div>
+                </div>
+                <div class="list-row-right">5/22</div>
+              </div>
+              <div class="list-row">
+                <div class="list-row-main">
+                  <div class="list-row-title">INV-2026-034 · ヤワラギ建築 · ¥860,000</div>
+                  <div class="list-row-sub"><span class="tag">C-024</span><span>保留中</span></div>
+                </div>
+                <div class="list-row-right">未定</div>
+              </div>
+            </section>
+
+          </div><!-- /RIGHT column -->
+
+        </div><!-- /dash-grid -->
+
+      </div><!-- /page-today -->
+
+
+      <!-- ════════ TODO ════════ -->
+      <div id="page-todo" class="page">
+        <div class="page-head">
+          <div class="page-title-wrap">
+            <h1 class="page-title">TODO・リマインド</h1>
+          </div>
+          <div class="page-actions">
+            <button class="btn ghost">
+              <svg width="12" height="12"><use href="#i-export"/></svg>
+              エクスポート
+            </button>
+            <button class="btn primary">
+              <svg width="12" height="12" stroke="white"><use href="#i-plus"/></svg>
+              TODO 追加
+            </button>
+          </div>
+        </div>
+
+        <div class="tab-bar">
+          <div class="tab active">本日 <span class="tab-num">8</span></div>
+          <div class="tab">今週 <span class="tab-num">12</span></div>
+          <div class="spacer"></div>
+          <div class="tab">
+            <svg width="12" height="12"><use href="#i-filter"/></svg>
+            <span class="tab-label">フィルター</span>
+          </div>
+          <div class="tab">
+            <svg width="12" height="12"><use href="#i-sort"/></svg>
+            <span class="tab-label">並び替え</span>
+          </div>
+        </div>
+
+        <div class="todo-table">
+          <div class="todo-table-head">
+            <div></div>
+            <div>P</div>
+            <div>タスク / Task</div>
+            <div>案件 / Case</div>
+            <div>担当</div>
+            <div>状態</div>
+            <div>期限</div>
+          </div>
+
+          <div class="todo-row">
+            <div class="checkbox"></div>
+            <span class="priority-flag p1">P1</span>
+            <div>
+              <div class="todo-title"><span class="todo-source">AI</span>浜野様へお詫び＋対策方針メールを送付（要承認！）</div>
+              <div class="todo-sub">議事録 "5/14_浜野様MTG.docx" から AIが抽出 · ブロッカー: 承認待ち</div>
+            </div>
+            <div class="todo-case">
+              在庫管理SaaS
+              <span class="case-code">C-2024-006</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle" style="width:20px;height:20px;font-size:10px">山</div>
+            </div>
+            <div class="todo-state s-waiting">承認待ち</div>
+            <div class="todo-due urgent">本日 22:00</div>
+          </div>
+
+          <div class="todo-row">
+            <div class="checkbox"></div>
+            <span class="priority-flag p1">P1</span>
+            <div>
+              <div class="todo-title"><span class="todo-source">AI</span>BloomSalon 田中様へ仕様確認の催促連絡</div>
+              <div class="todo-sub">3日未返信 · AI下書き済み</div>
+            </div>
+            <div class="todo-case">
+              美容室予約システム
+              <span class="case-code">C-2024-011</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle" style="width:20px;height:20px;font-size:10px">山</div>
+            </div>
+            <div class="todo-state s-progress">進行中</div>
+            <div class="todo-due urgent">本日</div>
+          </div>
+
+          <div class="todo-row done">
+            <div class="checkbox checked"></div>
+            <span class="priority-flag p2">P2</span>
+            <div>
+              <div class="todo-title"><span class="todo-source">SYS</span>朝会レポート確認 · 5/16 全体進捗</div>
+              <div class="todo-sub">AI自動生成 · 7案件サマリ</div>
+            </div>
+            <div class="todo-case">
+              <span class="case-code">SYSTEM</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle" style="width:20px;height:20px;font-size:10px">山</div>
+            </div>
+            <div class="todo-state s-done">完了</div>
+            <div class="todo-due done">09:00</div>
+          </div>
+
+          <div class="todo-row">
+            <div class="checkbox"></div>
+            <span class="priority-flag p2">P2</span>
+            <div>
+              <div class="todo-title"><span class="todo-source">AI</span>INV-2026-031 サクラ印刷 入金リマインド送信</div>
+              <div class="todo-sub">支払期限 5/10 超過 · backoffice 確認後送信</div>
+            </div>
+            <div class="todo-case">
+              業務管理ツール導入
+              <span class="case-code">C-2024-019</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle cool" style="width:20px;height:20px;font-size:10px">高</div>
+            </div>
+            <div class="todo-state s-waiting">承認待ち</div>
+            <div class="todo-due urgent">本日 17:00</div>
+          </div>
+
+          <div class="todo-row">
+            <div class="checkbox"></div>
+            <span class="priority-flag p2">P2</span>
+            <div>
+              <div class="todo-title"><span class="todo-source">AI</span>グレイス商会へ検収依頼の下書きをレビュー</div>
+              <div class="todo-sub">送信 5/13 · 顧客返信 3日経過</div>
+            </div>
+            <div class="todo-case">
+              EC サイト保守
+              <span class="case-code">C-2024-017</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle" style="width:20px;height:20px;font-size:10px">山</div>
+            </div>
+            <div class="todo-state s-progress">進行中</div>
+            <div class="todo-due">本日 18:30</div>
+          </div>
+
+          <div class="todo-row">
+            <div class="checkbox"></div>
+            <span class="priority-flag p2">P2</span>
+            <div>
+              <div class="todo-title">鈴木さんに議事録レビュー依頼（返信待）</div>
+              <div class="todo-sub">採用支援 LP キックオフ議事録</div>
+            </div>
+            <div class="todo-case">
+              採用支援 LP
+              <span class="case-code">C-2024-022</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle olive" style="width:20px;height:20px;font-size:10px">鈴</div>
+            </div>
+            <div class="todo-state s-progress">進行中</div>
+            <div class="todo-due">本日</div>
+          </div>
+
+          <div class="todo-row">
+            <div class="checkbox"></div>
+            <span class="priority-flag p3">P3</span>
+            <div>
+              <div class="todo-title">オリオン人事 LP 最終確認URL送信</div>
+              <div class="todo-sub">ステージング環境で確認済</div>
+            </div>
+            <div class="todo-case">
+              採用支援 LP
+              <span class="case-code">C-2024-022</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle warm" style="width:20px;height:20px;font-size:10px">佐</div>
+            </div>
+            <div class="todo-state s-progress">未着手</div>
+            <div class="todo-due">明日</div>
+          </div>
+
+          <div class="todo-row">
+            <div class="checkbox"></div>
+            <span class="priority-flag p3">P3</span>
+            <div>
+              <div class="todo-title"><span class="todo-source">AI</span>ヤワラギ建築 素材確認連絡を 5/22 にスケジュール</div>
+              <div class="todo-sub">5/8 から素材待ち · 8日経過</div>
+            </div>
+            <div class="todo-case">
+              コーポレートサイト
+              <span class="case-code">C-2024-024</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle olive" style="width:20px;height:20px;font-size:10px">鈴</div>
+            </div>
+            <div class="todo-state s-blocked">ブロック</div>
+            <div class="todo-due">5/22</div>
+          </div>
+
+          <div class="todo-row">
+            <div class="checkbox"></div>
+            <span class="priority-flag p3">P3</span>
+            <div>
+              <div class="todo-title"><span class="todo-source">AI</span>BloomSalon 週次進捗報告ドラフト作成</div>
+              <div class="todo-sub">毎週金曜 · 自動下書き済</div>
+            </div>
+            <div class="todo-case">
+              美容室予約システム
+              <span class="case-code">C-2024-011</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle" style="width:20px;height:20px;font-size:10px">山</div>
+            </div>
+            <div class="todo-state s-progress">未着手</div>
+            <div class="todo-due">5/17</div>
+          </div>
+
+          <div class="todo-row">
+            <div class="checkbox"></div>
+            <span class="priority-flag p3">P3</span>
+            <div>
+              <div class="todo-title">納品物の最終チェック（採用支援 LP）</div>
+              <div class="todo-sub">クロスブラウザ確認・モバイル対応</div>
+            </div>
+            <div class="todo-case">
+              採用支援 LP
+              <span class="case-code">C-2024-022</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle warm" style="width:20px;height:20px;font-size:10px">佐</div>
+              <div class="avatar-circle olive" style="width:20px;height:20px;font-size:10px;margin-left:-6px">鈴</div>
+            </div>
+            <div class="todo-state s-progress">未着手</div>
+            <div class="todo-due">5/21</div>
+          </div>
+
+          <div class="todo-row done">
+            <div class="checkbox checked"></div>
+            <span class="priority-flag p3">P3</span>
+            <div>
+              <div class="todo-title">高橋さん勤怠申請承認</div>
+              <div class="todo-sub">5/18 期限</div>
+            </div>
+            <div class="todo-case">
+              <span class="case-code">HR</span>
+            </div>
+            <div class="row">
+              <div class="avatar-circle" style="width:20px;height:20px;font-size:10px">山</div>
+            </div>
+            <div class="todo-state s-done">完了</div>
+            <div class="todo-due done">5/15</div>
+          </div>
+
+        </div>
+      </div><!-- /page-todo -->
+
+
+      <!-- ════════ FILES ════════ -->
+      <div id="page-files" class="page">
+        <div class="page-head">
+          <div class="page-title-wrap">
+            <h1 class="page-title">ファイル・ナレッジ管理</h1>
+          </div>
+          <div class="page-actions">
+            <button class="btn ghost">
+              <svg width="12" height="12"><use href="#i-filter"/></svg>
+              フィルター
+            </button>
+            <button class="btn primary">
+              <svg width="12" height="12" stroke="white"><use href="#i-plus"/></svg>
+              アップロード
+            </button>
+          </div>
+        </div>
+
+        <div class="files-layout">
+
+          <aside class="files-side">
+            <div class="files-side-section">区分</div>
+            <div class="files-side-item active">
+              <svg width="13" height="13"><use href="#i-files"/></svg>
+              全てのファイル
+              <span class="count">142</span>
+            </div>
+            <div class="files-side-item">提案書 <span class="count">18</span></div>
+            <div class="files-side-item">議事録 <span class="count">34</span></div>
+            <div class="files-side-item">契約書 <span class="count">12</span></div>
+            <div class="files-side-item">納品物 <span class="count">29</span></div>
+            <div class="files-side-item">請求書 <span class="count">22</span></div>
+            <div class="files-side-item">参考資料 <span class="count">27</span></div>
+
+            <div class="files-side-section">案件で絞り込み</div>
+            <div class="files-side-item">C-011 BloomSalon <span class="count">14</span></div>
+            <div class="files-side-item">C-017 グレイス商会 <span class="count">9</span></div>
+            <div class="files-side-item">C-022 オリオン人事 <span class="count">11</span></div>
+            <div class="files-side-item">C-006 ハマノ機材 <span class="count">21</span></div>
+
+            <div class="files-side-section">AI参照</div>
+            <div class="files-side-item">AIが要約済 <span class="count">87</span></div>
+            <div class="files-side-item">未インデックス <span class="count">3</span></div>
+          </aside>
+
+          <div class="files-main">
+            <div class="files-table-head">
+              <div></div>
+              <div>ファイル名 / Name</div>
+              <div>案件</div>
+              <div>区分</div>
+              <div>サイズ</div>
+              <div>更新</div>
+              <div>権限</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico pdf">PDF</div>
+              <div>
+                <div class="file-name">2024-08_業務委託契約書_BloomSalon.pdf</div>
+                <div class="file-tags">
+                  <span class="file-tag">契約</span>
+                  <span class="file-tag ai">AI要約済</span>
+                </div>
+              </div>
+              <div class="file-meta">C-011</div>
+              <div class="file-meta">契約書</div>
+              <div class="file-meta muted">1.4 MB</div>
+              <div class="file-meta muted">05.14</div>
+              <div class="file-meta">PM+</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico doc">DOC</div>
+              <div>
+                <div class="file-name">5-14_浜野様MTG_議事録.docx</div>
+                <div class="file-tags">
+                  <span class="file-tag">議事録</span>
+                  <span class="file-tag ai">TODO 3件抽出</span>
+                </div>
+              </div>
+              <div class="file-meta">C-006</div>
+              <div class="file-meta">議事録</div>
+              <div class="file-meta muted">82 KB</div>
+              <div class="file-meta muted">05.14</div>
+              <div class="file-meta">PM+</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico pdf">PDF</div>
+              <div>
+                <div class="file-name">INV-2026-029_BloomSalon.pdf</div>
+                <div class="file-tags">
+                  <span class="file-tag">請求書</span>
+                  <span class="file-tag">送付済</span>
+                </div>
+              </div>
+              <div class="file-meta">C-011</div>
+              <div class="file-meta">請求書</div>
+              <div class="file-meta muted">340 KB</div>
+              <div class="file-meta muted">05.15</div>
+              <div class="file-meta">経理+</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico doc">DOC</div>
+              <div>
+                <div class="file-name">採用支援LP_提案書_v3.docx</div>
+                <div class="file-tags">
+                  <span class="file-tag">提案書</span>
+                  <span class="file-tag ai">AI要約済</span>
+                </div>
+              </div>
+              <div class="file-meta">C-022</div>
+              <div class="file-meta">提案書</div>
+              <div class="file-meta muted">2.1 MB</div>
+              <div class="file-meta muted">05.13</div>
+              <div class="file-meta">全員</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico xls">XLS</div>
+              <div>
+                <div class="file-name">EC保守_決済不具合_調査ログ.xlsx</div>
+                <div class="file-tags">
+                  <span class="file-tag">調査</span>
+                </div>
+              </div>
+              <div class="file-meta">C-017</div>
+              <div class="file-meta">参考資料</div>
+              <div class="file-meta muted">96 KB</div>
+              <div class="file-meta muted">05.13</div>
+              <div class="file-meta">PM+</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico img">IMG</div>
+              <div>
+                <div class="file-name">ヤワラギ建築_店舗写真_素材待ち.zip</div>
+                <div class="file-tags">
+                  <span class="file-tag">素材</span>
+                  <span class="file-tag">未着</span>
+                </div>
+              </div>
+              <div class="file-meta">C-024</div>
+              <div class="file-meta">納品物</div>
+              <div class="file-meta muted">— —</div>
+              <div class="file-meta muted">未着</div>
+              <div class="file-meta">全員</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico pdf">PDF</div>
+              <div>
+                <div class="file-name">在庫管理SaaS_仕様変更_v2.pdf</div>
+                <div class="file-tags">
+                  <span class="file-tag">仕様</span>
+                  <span class="file-tag ai">AI要約済</span>
+                </div>
+              </div>
+              <div class="file-meta">C-006</div>
+              <div class="file-meta">参考資料</div>
+              <div class="file-meta muted">880 KB</div>
+              <div class="file-meta muted">05.12</div>
+              <div class="file-meta">PM+</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico doc">DOC</div>
+              <div>
+                <div class="file-name">LP制作代行_キックオフ議事録.docx</div>
+                <div class="file-tags">
+                  <span class="file-tag">議事録</span>
+                  <span class="file-tag ai">TODO 4件抽出</span>
+                </div>
+              </div>
+              <div class="file-meta">C-022</div>
+              <div class="file-meta">議事録</div>
+              <div class="file-meta muted">68 KB</div>
+              <div class="file-meta muted">05.10</div>
+              <div class="file-meta">全員</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico pdf">PDF</div>
+              <div>
+                <div class="file-name">INV-2026-031_サクラ印刷_ドラフト.pdf</div>
+                <div class="file-tags">
+                  <span class="file-tag">請求書</span>
+                  <span class="file-tag ai">下書き</span>
+                </div>
+              </div>
+              <div class="file-meta">C-019</div>
+              <div class="file-meta">請求書</div>
+              <div class="file-meta muted">312 KB</div>
+              <div class="file-meta muted">05.16</div>
+              <div class="file-meta">経理+</div>
+            </div>
+
+            <div class="file-row">
+              <div class="file-ico xls">XLS</div>
+              <div>
+                <div class="file-name">2026Q2_案件サマリ_社内.xlsx</div>
+                <div class="file-tags">
+                  <span class="file-tag">社内</span>
+                </div>
+              </div>
+              <div class="file-meta">—</div>
+              <div class="file-meta">参考資料</div>
+              <div class="file-meta muted">42 KB</div>
+              <div class="file-meta muted">05.01</div>
+              <div class="file-meta">admin</div>
+            </div>
+
+          </div>
+        </div>
+      </div><!-- /page-files -->
+
+
+      <!-- ════════ PERM ════════ -->
+      <div id="page-perm" class="page">
+        <div class="page-head">
+          <div class="page-title-wrap">
+            <h1 class="page-title">ユーザー・権限</h1>
+          </div>
+          <div class="page-actions">
+            <button class="btn primary">
+              <svg width="12" height="12" stroke="white"><use href="#i-plus"/></svg>
+              ユーザー招待
+            </button>
+          </div>
+        </div>
+
+        <!-- User management table -->
+        <div class="user-table">
+          <div class="user-table-head">
+            <div>ユーザー</div>
+            <div>権限 / Role</div>
+            <div>担当案件</div>
+            <div>最終ログイン</div>
+            <div></div>
+          </div>
+
+          <div class="user-table-row">
+            <div class="user-info">
+              <div class="user-avatar-md" style="background:#3B6EA5">山</div>
+              <div>
+                <div class="user-display-name">山田 太郎</div>
+                <div class="user-email">yamada@nerdech.co.jp</div>
+              </div>
+            </div>
+            <div>
+              <div class="role-picker" data-uid="u1">
+                <span class="role-picker-dot r-admin"></span>
+                <span class="role-current">admin</span>
+                <svg class="role-picker-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 4l2.5 3 2.5-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="role-dropdown">
+                  <div class="role-option" data-role="owner">owner</div>
+                  <div class="role-option" data-role="admin">admin</div>
+                  <div class="role-option" data-role="pm">pm</div>
+                  <div class="role-option" data-role="member">member</div>
+                  <div class="role-option" data-role="backoffice">backoffice</div>
+                  <div class="role-option" data-role="viewer">viewer</div>
+                </div>
+              </div>
+            </div>
+            <div class="user-cases">C-011, C-017, C-022</div>
+            <div class="user-last-login">今日 09:14</div>
+            <div><button class="user-action-btn">…</button></div>
+          </div>
+
+          <div class="user-table-row">
+            <div class="user-info">
+              <div class="user-avatar-md" style="background:#5C6B7A">佐</div>
+              <div>
+                <div class="user-display-name">佐藤 美咲</div>
+                <div class="user-email">sato@nerdech.co.jp</div>
+              </div>
+            </div>
+            <div>
+              <div class="role-picker" data-uid="u2">
+                <span class="role-picker-dot r-pm"></span>
+                <span class="role-current">pm</span>
+                <svg class="role-picker-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 4l2.5 3 2.5-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="role-dropdown">
+                  <div class="role-option" data-role="owner">owner</div>
+                  <div class="role-option" data-role="admin">admin</div>
+                  <div class="role-option" data-role="pm">pm</div>
+                  <div class="role-option" data-role="member">member</div>
+                  <div class="role-option" data-role="backoffice">backoffice</div>
+                  <div class="role-option" data-role="viewer">viewer</div>
+                </div>
+              </div>
+            </div>
+            <div class="user-cases">C-006, C-033</div>
+            <div class="user-last-login">今日 08:51</div>
+            <div><button class="user-action-btn">…</button></div>
+          </div>
+
+          <div class="user-table-row">
+            <div class="user-info">
+              <div class="user-avatar-md" style="background:#4A7C6F">高</div>
+              <div>
+                <div class="user-display-name">高橋 健一</div>
+                <div class="user-email">takahashi@nerdech.co.jp</div>
+              </div>
+            </div>
+            <div>
+              <div class="role-picker" data-uid="u3">
+                <span class="role-picker-dot r-member"></span>
+                <span class="role-current">member</span>
+                <svg class="role-picker-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 4l2.5 3 2.5-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="role-dropdown">
+                  <div class="role-option" data-role="owner">owner</div>
+                  <div class="role-option" data-role="admin">admin</div>
+                  <div class="role-option" data-role="pm">pm</div>
+                  <div class="role-option" data-role="member">member</div>
+                  <div class="role-option" data-role="backoffice">backoffice</div>
+                  <div class="role-option" data-role="viewer">viewer</div>
+                </div>
+              </div>
+            </div>
+            <div class="user-cases">C-017, C-044</div>
+            <div class="user-last-login">昨日 17:33</div>
+            <div><button class="user-action-btn">…</button></div>
+          </div>
+
+          <div class="user-table-row">
+            <div class="user-info">
+              <div class="user-avatar-md" style="background:#7A5C6B">鈴</div>
+              <div>
+                <div class="user-display-name">鈴木 理恵</div>
+                <div class="user-email">suzuki@nerdech.co.jp</div>
+              </div>
+            </div>
+            <div>
+              <div class="role-picker" data-uid="u4">
+                <span class="role-picker-dot r-member"></span>
+                <span class="role-current">member</span>
+                <svg class="role-picker-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2.5 4l2.5 3 2.5-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <div class="role-dropdown">
+                  <div class="role-option" data-role="owner">owner</div>
+                  <div class="role-option" data-role="admin">admin</div>
+                  <div class="role-option" data-role="pm">pm</div>
+                  <div class="role-option" data-role="member">member</div>
+                  <div class="role-option" data-role="backoffice">backoffice</div>
+                  <div class="role-option" data-role="viewer">viewer</div>
+                </div>
+              </div>
+            </div>
+            <div class="user-cases">C-022</div>
+            <div class="user-last-login">5/14 11:02</div>
+            <div><button class="user-action-btn">…</button></div>
+          </div>
+        </div>
+
+        <!-- 案件ステータス reference -->
+        <div class="section-label" style="margin-bottom:10px">案件ステータス標準 <div class="rule"></div></div>
+        <div class="perm-table">
+          <div class="perm-head" style="grid-template-columns: 140px 1fr 110px">
+            <div>ステータス</div>
+            <div>意味</div>
+            <div>健康影響</div>
+          </div>
+          <div class="perm-row" style="grid-template-columns: 140px 1fr 110px; padding:9px 20px">
+            <div class="perm-role" style="font-family:var(--f-jp);text-transform:none;font-weight:500"><span class="dot" style="background:var(--info-txt)"></span>問い合わせ</div>
+            <div class="perm-abilities">相談・見込み案件の段階。</div>
+            <div class="perm-users">影響なし</div>
+          </div>
+          <div class="perm-row" style="grid-template-columns: 140px 1fr 110px; padding:9px 20px">
+            <div class="perm-role" style="font-family:var(--f-jp);text-transform:none;font-weight:500"><span class="dot" style="background:var(--accent)"></span>進行中</div>
+            <div class="perm-abilities">実作業中。期限・タスク状況で健康状態を自動判定。</div>
+            <div class="perm-users">標準判定</div>
+          </div>
+          <div class="perm-row" style="grid-template-columns: 140px 1fr 110px; padding:9px 20px">
+            <div class="perm-role" style="font-family:var(--f-jp);text-transform:none;font-weight:500"><span class="dot" style="background:var(--risk-bar)"></span>顧客確認待ち</div>
+            <div class="perm-abilities">顧客からの回答・素材・確認・検収待ち。3日超で注意。</div>
+            <div class="perm-users">+10 / 日</div>
+          </div>
+          <div class="perm-row" style="grid-template-columns: 140px 1fr 110px; padding:9px 20px">
+            <div class="perm-role" style="font-family:var(--f-jp);text-transform:none;font-weight:500"><span class="dot" style="background:var(--good-bar)"></span>納品済み</div>
+            <div class="perm-abilities">顧客へ成果物を提出済。検収待ちへ自動遷移。</div>
+            <div class="perm-users">影響なし</div>
+          </div>
+          <div class="perm-row" style="grid-template-columns: 140px 1fr 110px; padding:9px 20px">
+            <div class="perm-role" style="font-family:var(--f-jp);text-transform:none;font-weight:500"><span class="dot" style="background:var(--delay-bar)"></span>入金待ち</div>
+            <div class="perm-abilities">請求済み・入金前。支払期限超過で請求アラート発火。</div>
+            <div class="perm-users">+30 / 期限超</div>
+          </div>
+          <div class="perm-row" style="grid-template-columns: 140px 1fr 110px; padding:9px 20px">
+            <div class="perm-role" style="font-family:var(--f-jp);text-transform:none;font-weight:500"><span class="dot" style="background:var(--hold-txt)"></span>保留 / 失注</div>
+            <div class="perm-abilities">顧客都合・社内都合で一時停止、または受注せず終了。</div>
+            <div class="perm-users">影響なし</div>
+          </div>
+        </div>
+
+      </div><!-- /page-perm -->
+
+
+      <!-- ════════ SETTINGS ════════ -->
+      <div id="page-settings" class="page">
+        <div class="page-head">
+          <div class="page-title-wrap">
+            <h1 class="page-title">AI実行・承認設定</h1>
+          </div>
+          <div class="page-actions">
+            <button class="btn ghost">変更履歴</button>
+            <button class="btn primary">保存</button>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+
+          <!-- LEFT: AI Execution Levels -->
+          <section class="settings-card">
+            <h2 class="settings-card-title">AI実行レベル</h2>
+
+            <div class="ai-levels">
+              <div class="ai-level">
+                <span class="ai-level-tag">Lv0</span>
+                <div class="ai-level-body">
+                  <span class="ai-level-name">無効</span>
+                  <span class="ai-level-desc">AI はその操作を一切行わない。</span>
+                </div>
+                <div class="ai-level-mark"></div>
+              </div>
+
+              <div class="ai-level">
+                <span class="ai-level-tag">Lv1</span>
+                <div class="ai-level-body">
+                  <span class="ai-level-name">提案のみ</span>
+                  <span class="ai-level-desc">AIは候補や提案だけを出す。データ反映はしない。</span>
+                </div>
+                <div class="ai-level-mark"></div>
+              </div>
+
+              <div class="ai-level selected">
+                <span class="ai-level-tag">Lv2</span>
+                <div class="ai-level-body">
+                  <span class="ai-level-name">下書き作成</span>
+                  <span class="ai-level-desc">文面、TODO案、請求書案などを作成する。<strong>現在の組織既定値。</strong></span>
+                </div>
+                <div class="ai-level-mark"></div>
+              </div>
+
+              <div class="ai-level">
+                <span class="ai-level-tag">Lv3</span>
+                <div class="ai-level-body">
+                  <span class="ai-level-name">内部反映</span>
+                  <span class="ai-level-desc">システム内のTODO登録、案件更新、ログ保存まで行う。</span>
+                </div>
+                <div class="ai-level-mark"></div>
+              </div>
+
+              <div class="ai-level">
+                <span class="ai-level-tag">Lv4</span>
+                <div class="ai-level-body">
+                  <span class="ai-level-name">承認後に外部実行</span>
+                  <span class="ai-level-desc">PM承認後に通知、送信、保存、外部反映を実行。</span>
+                </div>
+                <div class="ai-level-mark"></div>
+              </div>
+
+              <div class="ai-level disabled">
+                <span class="ai-level-tag">Lv5</span>
+                <div class="ai-level-body">
+                  <span class="ai-level-name">条件付き自動実行</span>
+                  <span class="ai-level-desc">事前設定された低リスク操作のみ承認なしで実行。MVP原則未使用。</span>
+                </div>
+                <div class="ai-level-mark"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- RIGHT: Approval flow -->
+          <section class="settings-card">
+            <h2 class="settings-card-title">承認フロー</h2>
+
+            <div class="approval-table">
+              <div class="approval-thead">
+                <div>対象操作</div>
+                <div>初期方針</div>
+                <div>有効</div>
+              </div>
+              <div class="approval-trow">
+                <div class="approval-name">顧客・関係者への外部送信</div>
+                <div><span class="mode-pill required">承認必須</span></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="approval-trow">
+                <div class="approval-name">請求書の正式発行</div>
+                <div><span class="mode-pill required">承認必須</span></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="approval-trow">
+                <div class="approval-name">金額変更</div>
+                <div><span class="mode-pill required">承認必須</span></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="approval-trow">
+                <div class="approval-name">納期変更</div>
+                <div><span class="mode-pill required">承認必須</span></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="approval-trow">
+                <div class="approval-name">契約条件変更</div>
+                <div><span class="mode-pill required">承認必須</span></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="approval-trow">
+                <div class="approval-name">ファイル削除</div>
+                <div><span class="mode-pill admin">admin のみ</span></div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="approval-trow">
+                <div class="approval-name">外部サービス投稿</div>
+                <div><span class="mode-pill required">承認必須</span></div>
+                <div class="toggle on"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Notification channel -->
+          <section class="settings-card" style="grid-column: span 2">
+            <h2 class="settings-card-title">通知チャンネル</h2>
+            <div class="approval-list">
+              <div class="approval-item" style="grid-template-columns: 1fr 130px 90px">
+                <div>
+                  <div class="approval-name">Discord — #pm-progress / #pm-alerts</div>
+                  <div class="approval-desc">進捗報告の取り込み、リマインド送信、承認結果通知。</div>
+                </div>
+                <div class="approval-mode" style="color:var(--good-txt)">● 接続中</div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="approval-item" style="grid-template-columns: 1fr 130px 90px">
+                <div>
+                  <div class="approval-name">Slack</div>
+                  <div class="approval-desc">2026 Q3 予定 · 将来追加できる通知チャンネル設計。</div>
+                </div>
+                <div class="approval-mode" style="color:var(--txt-3)">未接続</div>
+                <div class="toggle"></div>
+              </div>
+              <div class="approval-item" style="grid-template-columns: 1fr 130px 90px">
+                <div>
+                  <div class="approval-name">Chatwork / Gmail</div>
+                  <div class="approval-desc">2026 Q4 予定 · 顧客連絡チャネルとの接続。</div>
+                </div>
+                <div class="approval-mode" style="color:var(--txt-3)">未接続</div>
+                <div class="toggle"></div>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- External integrations -->
+        <section class="integration-section">
+          <div class="integration-section-title">外部連携</div>
+          <div class="integration-section-sub">接続済みのサービスを管理します。連携を有効にするとAIが自動で情報を取得・送信できるようになります。</div>
+          <div class="integration-grid">
+
+            <div class="integration-card">
+              <div class="integration-card-head">
+                <div class="integration-name">Discord</div>
+                <span class="integration-badge connected">接続済み</span>
+              </div>
+              <div class="integration-desc">進捗報告・リマインド・承認結果を #pm-progress / #pm-alerts へ送信。AIからの通知を自動投稿します。</div>
+              <div class="integration-actions">
+                <button class="integration-btn mono">設定を開く</button>
+                <button class="integration-btn">切断</button>
+              </div>
+            </div>
+
+            <div class="integration-card">
+              <div class="integration-card-head">
+                <div class="integration-name">Chatwork</div>
+                <span class="integration-badge login-req">ログイン要</span>
+              </div>
+              <div class="integration-desc">顧客・外部パートナーへのメッセージ送信ドラフトをAIが生成。承認後に自動送信します。</div>
+              <div class="integration-actions">
+                <button class="integration-btn primary">連携する</button>
+              </div>
+            </div>
+
+            <div class="integration-card">
+              <div class="integration-card-head">
+                <div class="integration-name">GitHub</div>
+                <span class="integration-badge ready">準備完了</span>
+              </div>
+              <div class="integration-desc">開発案件のIssue・PR情報を取得し、案件の進捗・健康状態に反映します。</div>
+              <div class="integration-actions">
+                <button class="integration-btn primary">有効にする</button>
+                <button class="integration-btn mono">設定</button>
+              </div>
+            </div>
+
+            <div class="integration-card">
+              <div class="integration-card-head">
+                <div class="integration-name">Cloudflare</div>
+                <span class="integration-badge connected">接続済み</span>
+              </div>
+              <div class="integration-desc">サイト・サービスのデプロイ状況を取得し、納品案件の稼働確認をAIが自動で行います。</div>
+              <div class="integration-actions">
+                <button class="integration-btn mono">設定を開く</button>
+                <button class="integration-btn">切断</button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+      </div><!-- /page-settings -->
+
+
+      <!-- ─── Activity Panel (right drawer) ─── -->
+      <div class="activity-panel" id="activityPanel">
+        <div class="activity-head">
+          <span class="activity-head-title">Activity Log</span>
+          <span class="activity-filter">ALL · LIVE</span>
+        </div>
+
+        <div class="activity-day">2026 · MAY 16 · TODAY</div>
+
+        <div class="activity-item">
+          <span class="activity-time">22:10</span>
+          <span class="activity-actor"></span>
+          <div class="activity-body">
+            <div class="activity-title">優先度再算出</div>
+            <div class="activity-sub">期限・承認・請求アラートに基づき6案件を再評価</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <span class="activity-time">21:42</span>
+          <span class="activity-actor"></span>
+          <div class="activity-body">
+            <div class="activity-title">ドラフト生成 · お詫び＋対策方針</div>
+            <div class="activity-sub">C-006 浜野様向け · 要承認キュー追加 [draft#0182]</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <span class="activity-time">21:18</span>
+          <span class="activity-actor alert"></span>
+          <div class="activity-body">
+            <div class="activity-title">健康状態変更 · C-006</div>
+            <div class="activity-sub">遅延 → 炎上注意 (顧客不満コメント検知)</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <span class="activity-time">19:55</span>
+          <span class="activity-actor human"></span>
+          <div class="activity-body">
+            <div class="activity-title">佐藤 が進捗報告を投稿</div>
+            <div class="activity-sub">C-022 採用支援 LP · 完了 3 / ブロッカー 0 · Discord #pm-progress</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <span class="activity-time">18:30</span>
+          <span class="activity-actor"></span>
+          <div class="activity-body">
+            <div class="activity-title">議事録から TODO 抽出</div>
+            <div class="activity-sub">LP制作代行_キックオフ.docx → 確認事項4件 / TODO3件</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <span class="activity-time">15:12</span>
+          <span class="activity-actor human"></span>
+          <div class="activity-body">
+            <div class="activity-title">山田 が請求書を承認</div>
+            <div class="activity-sub">INV-2026-029 BloomSalon ¥780,000 → 送付済</div>
+          </div>
+        </div>
+
+        <div class="activity-day">2026 · MAY 15 · THU</div>
+
+        <div class="activity-item">
+          <span class="activity-time">23:40</span>
+          <span class="activity-actor alert"></span>
+          <div class="activity-body">
+            <div class="activity-title">入金期限超過</div>
+            <div class="activity-sub">INV-2026-031 サクラ印刷 ¥460,000 · 6日経過</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <span class="activity-time">14:08</span>
+          <span class="activity-actor human"></span>
+          <div class="activity-body">
+            <div class="activity-title">権限変更</div>
+            <div class="activity-sub">高橋さん viewer → member に昇格 (admin: 山田)</div>
+          </div>
+        </div>
+
+        <div class="activity-item">
+          <span class="activity-time">11:05</span>
+          <span class="activity-actor human"></span>
+          <div class="activity-body">
+            <div class="activity-title">山田 がドラフトを承認</div>
+            <div class="activity-sub">C-011 BloomSalon 進捗ドラフト · 送付済</div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+</div>
+
+
+<!-- ─── Chatbot ─── -->
+<div class="chatbot-backdrop" id="chatbotBackdrop" onclick="closeChatbot()"></div>
+
+<div class="chatbot-wrap" id="chatbotWrap">
+  <div class="chatbot-top">
+    <div class="chatbot-top-left">
+      <svg width="14" height="14" style="color:var(--accent)"><use href="#i-sparkle"/></svg>
+      <span class="chatbot-top-title">AI PM 補佐</span>
+      <span class="chatbot-top-sub">Lv2 · 案件横断</span>
+    </div>
+    <div class="chatbot-top-right">
+      <button class="chatbot-close" onclick="closeChatbot()">CLOSE</button>
+    </div>
+  </div>
+
+  <div class="chatbot-body" id="chatbotMessages">
+    <div class="chatbot-suggestions">
+      <div class="chatbot-hint-row">想定コマンド例 · TRY ONE</div>
+      <button class="chatbot-suggest" onclick="useSuggestion(this)">
+        <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+        今日見るべき案件を出して
+      </button>
+      <button class="chatbot-suggest" onclick="useSuggestion(this)">
+        <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+        C-006 の現状をまとめて
+      </button>
+      <button class="chatbot-suggest" onclick="useSuggestion(this)">
+        <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+        顧客確認が止まっている案件を出して
+      </button>
+      <button class="chatbot-suggest" onclick="useSuggestion(this)">
+        <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+        この進捗報告から連絡文を作って
+      </button>
+      <button class="chatbot-suggest" onclick="useSuggestion(this)">
+        <svg width="13" height="13"><use href="#i-sparkle"/></svg>
+        請求漏れ候補を出して
+      </button>
+    </div>
+  </div>
+
+  <div class="chatbot-input-row">
+    <input class="chatbot-input" id="chatbotInput" placeholder="案件・TODO・ファイルを横断して AI に尋ねる…" onclick="event.stopPropagation()" />
+    <button class="chatbot-send" onclick="sendMessage()">
+      <svg width="14" height="14"><use href="#i-arrow"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  /* ========== App behavior (unchanged contract) ========== */
+  const sidebar       = document.getElementById('sidebar');
+  const activityPanel = document.getElementById('activityPanel');
+  const notifBtn      = document.getElementById('notifBtn');
+  const searchBar     = document.getElementById('searchBar');
+  const searchPlaceholder = document.getElementById('searchPlaceholder');
+  const chatbotWrap   = document.getElementById('chatbotWrap');
+  const chatbotBackdrop = document.getElementById('chatbotBackdrop');
+
+  let sidebarExpanded = false;
+  let activityVisible = false;
+  let chatbotOpen = false;
+
+  function navClick(el) {
+    const isActive = el.classList.contains('active');
+    if (!sidebarExpanded) {
+      sidebarExpanded = true;
+      sidebar.classList.add('expanded');
+      setActive(el);
+    } else if (isActive) {
+      sidebarExpanded = false;
+      sidebar.classList.remove('expanded');
+    } else {
+      setActive(el);
+    }
+  }
+
+  function navByKey(key) {
+    const el = document.querySelector('.nav-item[data-page="'+key+'"]');
+    if (!el) return;
+    if (!sidebarExpanded) { sidebarExpanded = true; sidebar.classList.add('expanded'); }
+    setActive(el);
+  }
+
+  function setActive(el) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    const page = el.dataset.page;
+    if (page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      const target = document.getElementById('page-' + page);
+      if (target) target.classList.add('active');
+    }
+  }
+
+  function toggleActivity() {
+    activityVisible = !activityVisible;
+    activityPanel.classList.toggle('visible', activityVisible);
+    notifBtn.classList.toggle('active', activityVisible);
+  }
+
+  function openChatbot() {
+    if (chatbotOpen) return;
+    chatbotOpen = true;
+    chatbotWrap.classList.add('open');
+    chatbotBackdrop.classList.add('open');
+    searchBar.classList.add('active');
+    searchPlaceholder.textContent = 'AI に尋ねる…';
+    setTimeout(() => document.getElementById('chatbotInput').focus(), 80);
+  }
+
+  function closeChatbot() {
+    chatbotOpen = false;
+    chatbotWrap.classList.remove('open');
+    chatbotBackdrop.classList.remove('open');
+    searchBar.classList.remove('active');
+    searchPlaceholder.textContent = '案件・TODO・ファイルをAIに尋ねる…';
+  }
+
+  function useSuggestion(btn) {
+    document.getElementById('chatbotInput').value = btn.textContent.trim();
+    sendMessage();
+  }
+
+  function sendMessage() {
+    const input = document.getElementById('chatbotInput');
+    const text = input.value.trim();
+    if (!text) return;
+    const msgs = document.getElementById('chatbotMessages');
+    const sug = msgs.querySelector('.chatbot-suggestions');
+    if (sug) sug.remove();
+    const msg = document.createElement('div');
+    msg.className = 'msg-user';
+    msg.textContent = text;
+    msgs.appendChild(msg);
+    msgs.scrollTop = msgs.scrollHeight;
+    input.value = '';
+  }
+
+  document.getElementById('chatbotInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  // checkbox toggle
+  document.addEventListener('click', e => {
+    if (e.target.classList && e.target.classList.contains('checkbox')) {
+      e.target.classList.toggle('checked');
+      e.stopPropagation();
+    }
+  });
+
+  // toggle switch
+  document.querySelectorAll('.toggle').forEach(t => {
+    t.addEventListener('click', () => t.classList.toggle('on'));
+  });
+
+  // AI level select
+  document.querySelectorAll('.ai-level').forEach(l => {
+    l.addEventListener('click', () => {
+      if (l.classList.contains('disabled')) return;
+      document.querySelectorAll('.ai-level').forEach(x => x.classList.remove('selected'));
+      l.classList.add('selected');
+    });
+  });
+
+
+  // ── File filter ──
+  (function initFileFilter() {
+    const state = { category: null, case: null, ai: null };
+
+    window.fileFilter = function(el) {
+      const ftype = el.dataset.ftype;
+      const fval  = el.dataset.fval;
+      if (ftype === 'all') {
+        state.category = null;
+        state.case     = null;
+        state.ai       = null;
+      } else if (ftype === 'category') {
+        state.category = state.category === fval ? null : fval;
+      } else if (ftype === 'case') {
+        state.case = state.case === fval ? null : fval;
+      } else if (ftype === 'ai') {
+        state.ai = state.ai === fval ? null : fval;
+      }
+      applyFileFilter();
+    };
+
+    function applyFileFilter() {
+      const noFilter = !state.category && !state.case && !state.ai;
+
+      // サイドバーのアクティブ状態を更新
+      document.querySelectorAll('#page-files .files-side-item').forEach(item => {
+        const ftype = item.dataset.ftype;
+        const fval  = item.dataset.fval;
+        let active = false;
+        if      (ftype === 'all')      active = noFilter;
+        else if (ftype === 'category') active = state.category === fval;
+        else if (ftype === 'case')     active = state.case === fval;
+        else if (ftype === 'ai')       active = state.ai === fval;
+        item.classList.toggle('active', active);
+      });
+
+      // ファイル行の表示・非表示
+      document.querySelectorAll('#page-files .file-row').forEach(row => {
+        const caseOk = !state.case     || row.dataset.case     === state.case;
+        const catOk  = !state.category || row.dataset.category === state.category;
+        const aiOk   = !state.ai       || row.dataset.ai       === state.ai;
+        row.style.display = (caseOk && catOk && aiOk) ? '' : 'none';
+      });
+    }
+  })();
+
+  // ── Role picker ──
+  (function initRolePicker() {
+    const roleColors = { owner:'r-owner', admin:'r-admin', pm:'r-pm', member:'r-member', backoffice:'r-back', viewer:'r-viewer' };
+
+    document.addEventListener('click', function(e) {
+      const option = e.target.closest('.role-option');
+      const picker = e.target.closest('.role-picker');
+
+      if (option) {
+        const p = option.closest('.role-picker');
+        const role = option.dataset.role;
+        p.querySelector('.role-current').textContent = role;
+        const dot = p.querySelector('.role-picker-dot');
+        dot.className = 'role-picker-dot ' + (roleColors[role] || '');
+        p.classList.remove('open');
+        return;
+      }
+
+      if (picker) {
+        document.querySelectorAll('.role-picker.open').forEach(p => { if (p !== picker) p.classList.remove('open'); });
+        picker.classList.toggle('open');
+        return;
+      }
+
+      document.querySelectorAll('.role-picker.open').forEach(p => p.classList.remove('open'));
+    });
+  })();
+</script>
+</body>
+</html>
