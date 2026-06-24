@@ -302,12 +302,18 @@ const DEPTH_X = 0, DEPTH_Y = 0.50;   // 奥行きは上方向のみ（θ=90は�
 // 段の縦間隔は「1段の奥行き(RHO1*DEPTH_Y) + 厚み」より大きく取り、段同士が重ならないようにする
 const SLAB_T = 66;                     // 段の厚み（厚く）
 const LAYER_H = Math.ceil(RHO1 * DEPTH_Y + SLAB_T) + 24;   // = 重ならない最小値 + 余白
+// ピラミッド：上の段(pos大)ほど面積を小さく。pos 0=下段 … 2=上段
+const LAYER_SCALE = [1.0, 0.80, 0.62];
+// 段ごとの横ずらし（上の段ほど右へ）
+const LAYER_DX = 70;
+const layerFactor = pos => 0.72 + 0.28 * LAYER_SCALE[pos];   // ノード径の段スケール
 
 function proj(rho, thetaDeg, pos) {
     const a = thetaDeg * Math.PI / 180;
-    const fx = rho * Math.sin(a);   // 左右
-    const fy = rho * Math.cos(a);   // 奥行き
-    const x = APEX.x + fx * SX + fy * DEPTH_X;
+    const r = rho * LAYER_SCALE[pos];   // 段ごとに縮小（ピラミッド）
+    const fx = r * Math.sin(a);   // 左右
+    const fy = r * Math.cos(a);   // 奥行き
+    const x = APEX.x + fx * SX + fy * DEPTH_X + pos * LAYER_DX;   // 横ずらし
     const y = APEX.y - fy * DEPTH_Y - pos * LAYER_H;
     return [x, y];
 }
@@ -363,7 +369,7 @@ function computeGraph() {
     }));
 }
 const degree = id => NEIGH[id] ? NEIGH[id].size : 0;
-const nodeR  = nd => 13 + Math.min(degree(nd.file.id)*1.4, 9);
+const nodeR  = nd => (13 + Math.min(degree(nd.file.id)*1.4, 9)) * layerFactor(nd.pos);
 
 /* ════════════════ 状態 ════════════════ */
 let selected=null, hover=null;
@@ -477,7 +483,7 @@ function buildClusters(g){
             const rho=grp.nodes.reduce((s,n)=>s+n.rho,0)/grp.nodes.length;
             const [x,y]=proj(rho,theta,pos);
             const cnt=grp.nodes.length;
-            const r=Math.max(13, Math.min(46, 10+Math.sqrt(cnt)*7));
+            const r=Math.max(13, Math.min(46, 10+Math.sqrt(cnt)*7)) * layerFactor(pos);
             const c=el("circle",{cx:x,cy:y,r:r,fill:KIND_COLOR[grp.kind]||"#999",stroke:"#fff","stroke-width":"2.5",class:"cluster"});
             c.addEventListener("mouseenter",ev=>tipCluster(ev,grp,cnt));
             c.addEventListener("mousemove",ev=>moveTip(ev));
