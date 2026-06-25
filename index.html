@@ -33,8 +33,8 @@ body {
 .topbar .sub { font-size: 11px; color: #999; border-left: 1px solid #e2e2e2; padding-left: 12px; }
 
 /* ─── Stage ─── */
-.stage { position: relative; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; padding: 50px 300px 0 0; }
-.cake { width: min(94vh, calc(100vw - 360px), 1040px); height: min(94vh, calc(100vw - 360px), 1040px); display: block; user-select: none; }
+.stage { position: relative; width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; padding: 50px 284px 0 220px; }
+.cake { width: min(94vh, calc(100vw - 540px), 1000px); height: min(94vh, calc(100vw - 540px), 1000px); display: block; user-select: none; }
 
 /* ─── Legend (compact, tabbed) ─── */
 .legend { position: fixed; left: 16px; top: 60px; z-index: 15; width: 204px;
@@ -154,6 +154,109 @@ body {
 .axis-note   { font-family:'Inter'; font-weight: 600; fill: #bbb; }
 .nlabel { font-family:'Inter'; font-weight: 600; fill: #111; stroke:#fff; stroke-width: 3.4; paint-order: stroke; text-anchor: middle; }
 
+/* ════════════════ THEME（質感のある3Dプロダクト表示）════════════════ */
+body {
+    color: #1f2530;
+    background: #f4f6f8;   /* フラットな無地（質感・グラデなし）*/
+}
+/* スラブ＝フラットなアイソメ面。影は使わず、面の明度差で立体を表現 */
+.slab { filter: none; }
+.slab-top  { stroke:#c3ccd8; stroke-width:1.4; stroke-linejoin:round; }
+.slab-side { stroke:#c3ccd8; stroke-width:1.4; stroke-linejoin:round; }
+.edge { stroke:#c4cbd6; stroke-dasharray:none; }
+.node { stroke:#ffffff; stroke-width:2.4; }
+.layer-label { font-family:'Inter',sans-serif; font-weight:700; fill:#2a3340; letter-spacing:0; text-transform:none; }
+.layer-sub   { font-family:'Inter',sans-serif; font-weight:500; fill:#9aa4b1; }
+.axis-note   { font-family:'Inter',sans-serif; font-weight:500; fill:#b2bac6; }
+.cluster { stroke:#ffffff; stroke-width:2.4; }
+.cluster-cnt { font-family:'Inter',sans-serif; }
+
+/* ヘッダー */
+.topbar { background: rgba(255,255,255,.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom:1px solid #e9ecf1; height:50px; }
+.brand { font-family:'Inter',sans-serif; font-weight:700; letter-spacing:-.01em; text-transform:none; color:#1f2530; }
+.topbar .sub { font-family:'Inter',sans-serif; letter-spacing:0; text-transform:none; font-size:11px; color:#97a0ad; border-left-color:#e6e9ee; }
+
+/* コントロール */
+.add-btn { background:#1f2530; border-radius:9px; font-family:'Inter',sans-serif; letter-spacing:0; text-transform:none; }
+.add-btn:hover { background:#333d4c; }
+.mode-seg { border-color:#e3e7ec; border-radius:9px; }
+.mode-seg button { font-family:'Inter',sans-serif; letter-spacing:0; text-transform:none; }
+.mode-seg button.on { background:#1f2530; }
+.scope-sel { border-color:#e3e7ec; border-radius:9px; font-family:'Inter',sans-serif; letter-spacing:0; }
+
+/* パネル＝上質なカード */
+.legend, .inspector { background:#ffffff; border:1px solid #ebeef2; border-radius:16px; box-shadow:0 12px 36px rgba(24,34,58,.10); }
+.timeline { background:rgba(255,255,255,.92); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); border-left:1px solid #ebeef2; box-shadow:-8px 0 30px rgba(24,34,58,.05); }
+.tabs button { font-family:'Inter',sans-serif; letter-spacing:0; text-transform:none; }
+.legend h4, .insp-sec, .tl-head b { font-family:'Inter',sans-serif; letter-spacing:.03em; }
+.insp-name { font-family:'Inter',sans-serif; letter-spacing:-.01em; }
+
+/* モーダル */
+.modal-card { border-radius:18px; }
+
+/* ════════════════ SaaS リファインメント（階層・操作性）════════════════ */
+:root{
+    --ink:#161b22; --ink-2:#3a424d; --muted:#79838f; --muted-2:#9aa3b0;
+    --line:#e7eaef; --line-2:#eef1f4; --bg-panel:#fbfcfd; --accent:#2f6df6; --accent-soft:#eef3ff;
+}
+/* 主役は中央。左右パネルは静かに後退（影を消しハーフトーンの面に）*/
+.legend { background:var(--bg-panel); border:1px solid var(--line); border-radius:12px; box-shadow:none; }
+.timeline { background:var(--bg-panel); border-left:1px solid var(--line); box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.inspector { border:1px solid var(--line); box-shadow:0 18px 44px rgba(22,30,46,.16); }
+
+/* パネル見出し（共通トーン）*/
+.panel-head { display:flex; align-items:center; gap:8px; padding:13px 14px 2px; }
+.panel-title { font-size:10.5px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); }
+.filter-reset { margin-left:auto; font:inherit; font-size:11px; font-weight:600; color:var(--accent); background:none; border:none; cursor:pointer; padding:2px 2px; }
+.filter-reset:hover { text-decoration:underline; }
+
+/* タブ＝セグメントコントロール */
+.tabs { margin:9px 12px 2px; padding:3px; background:var(--line-2); border:none; border-radius:9px; }
+.tabs button { border-radius:7px; font-size:11.5px; font-weight:600; color:var(--muted); background:transparent; padding:6px 8px; transition:all .12s; }
+.tabs button.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(22,30,46,.14); }
+
+/* フィルター行＝押せる操作子 */
+.tabbody { padding:8px 8px 2px; max-height:none; }
+.frow { display:grid; grid-template-columns:17px 1fr; column-gap:9px; width:100%; text-align:left; align-items:start;
+    background:none; border:none; cursor:pointer; padding:7px 8px; border-radius:8px; font:inherit; transition:background .12s, opacity .12s; }
+.frow:hover { background:#eff2f6; }
+.frow .chk { width:16px; height:16px; border:1.6px solid #cdd4de; border-radius:5px; margin-top:1px; position:relative; transition:all .12s; }
+.frow.on .chk { background:var(--accent); border-color:var(--accent); }
+.frow.on .chk::after { content:""; position:absolute; left:4.5px; top:1.5px; width:4px; height:8px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
+.frow:not(.on) { opacity:.5; }
+.frow-nm { font-size:12.5px; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:7px; }
+.frow .dot { width:10px; height:10px; border-radius:50%; flex:none; }
+.frow-sub { font-size:11px; font-weight:500; color:var(--muted); margin-left:1px; }
+.frow-ds { display:block; font-size:10.5px; color:var(--muted-2); line-height:1.5; margin-top:3px; padding-left:17px; }
+.frow--kind { padding:6px 8px; }
+.foot { color:var(--muted-2); padding:6px 14px 12px; line-height:1.5; }
+
+/* タイムライン */
+.tl-head { padding:13px 16px 10px; display:flex; align-items:baseline; gap:8px; }
+.tl-head b { font-size:12.5px; font-weight:700; color:var(--ink); letter-spacing:0; text-transform:none; }
+.tl-head-sub { font-size:10.5px; color:var(--muted-2); }
+.tl-count { margin-left:auto; font-size:11px; font-weight:600; color:var(--muted); }
+.tl-group { list-style:none; position:sticky; top:0; background:linear-gradient(var(--bg-panel),var(--bg-panel) 70%, rgba(251,252,253,0));
+    padding:9px 12px 5px; font-size:10px; font-weight:700; letter-spacing:.04em; color:var(--muted-2); z-index:1; }
+.tl-row { grid-template-columns:10px 1fr auto; gap:10px; padding:8px 10px 8px 12px; }
+.tl-row::before { content:""; position:absolute; left:3px; top:7px; bottom:7px; width:2.5px; border-radius:2px; background:transparent; transition:background .12s; }
+.tl-row:hover { background:#eef1f5; }
+.tl-dot { width:9px; height:9px; margin-top:4px; align-self:start; }
+.tl-name { font-size:12.5px; font-weight:600; color:var(--ink); line-height:1.35; }
+.tl-sub { display:flex; gap:8px; margin-top:3px; align-items:center; }
+.tl-kind { font-size:10.5px; color:var(--muted); }
+.tl-date { font-size:10px; color:var(--muted-2); font-family:'DM Mono',monospace; }
+.tl-tier { align-self:center; font-size:9.5px; font-weight:600; border-radius:6px; padding:2px 7px; background:#eef0f3; color:var(--muted); }
+.tl-tier.t0 { background:#fdecec; color:#c2392b; }
+.tl-tier.t1 { background:#eaf1fe; color:#2f6df6; }
+.tl-tier.t2 { background:#eef0f3; color:#6b7480; }
+.tl-row.on { background:var(--accent-soft); box-shadow:none; }
+.tl-row.on::before { background:var(--accent); }
+.tl-empty { list-style:none; padding:24px 16px; text-align:center; color:var(--muted-2); font-size:12px; }
+
+/* インスペクタの見出し階層を少し強く */
+.insp-name { font-size:15px; color:var(--ink); }
+
 /* ─── Responsive ─── */
 @media (max-width: 1040px) {
     .stage { padding: 50px 0 38vh 0; }
@@ -218,17 +321,21 @@ body {
 </div>
 
 <aside class="legend">
+    <div class="panel-head">
+        <span class="panel-title">分類フィルター</span>
+        <button class="filter-reset" id="filter-reset" hidden>すべて表示</button>
+    </div>
     <div class="tabs">
         <button data-tab="layer" class="on">段 / 重要度</button>
         <button data-tab="kind">色 / 種類</button>
     </div>
     <div class="tabbody" id="tab-layer"></div>
     <div class="tabbody" id="tab-kind" hidden></div>
-    <p class="foot">奥行き＝アップロード時期。手前(先端)ほど新しいファイルです。</p>
+    <p class="foot" id="filter-status"></p>
 </aside>
 
 <aside class="timeline">
-    <div class="tl-head"><b>タイムライン</b><span>新しい順</span></div>
+    <div class="tl-head"><b>タイムライン</b><span class="tl-head-sub">新しい順</span><span class="tl-count" id="tl-count"></span></div>
     <ul class="tl-list" id="tl-list"></ul>
 </aside>
 
@@ -298,7 +405,7 @@ const APEX = { x: 300, y: 650 };
 const RHO0 = 100, RHO1 = 520;
 const THETA0 = 0, THETA1 = 90;        // 左辺(θ=0)=奥へ / 右辺(θ=90)=真横→水平。左右非対称の開き
 const SX = 1.10;
-const DEPTH_X = 0, DEPTH_Y = 0.50;   // 奥行きは上方向のみ（θ=90は奥行き0なので水平）
+const DEPTH_X = 0, DEPTH_Y = 0.50;   // 横方向のシアなし＝傾かない。回転は方位角(azimuth)＝垂直軸まわりで行う
 // 段の縦間隔は「1段の奥行き(RHO1*DEPTH_Y) + 厚み」より大きく取り、段同士が重ならないようにする
 const SLAB_T = 66;                     // 段の厚み（厚く）
 const LAYER_H = Math.ceil(RHO1 * DEPTH_Y + SLAB_T) + 24;   // = 重ならない最小値 + 余白
@@ -307,14 +414,23 @@ const LAYER_SCALE = [1.0, 0.80, 0.62];
 // 段ごとの横ずらし（上の段ほど右へ）
 const LAYER_DX = 70;
 const layerFactor = pos => 0.72 + 0.28 * LAYER_SCALE[pos];   // ノード径の段スケール
+// ターンテーブル回転（方位角）。地面プレーンで回すので段の水平は保たれる。
+let azimuth = 0;                       // ラジアン。マウスホイールで変更
+const AZ_MIN = -1.5, AZ_MAX = 1.5;     // ±約86°
 
 function proj(rho, thetaDeg, pos) {
-    const a = thetaDeg * Math.PI / 180;
+    const ca = Math.cos(azimuth), sa = Math.sin(azimuth);   // 方位回転
     const r = rho * LAYER_SCALE[pos];   // 段ごとに縮小（ピラミッド）
-    const fx = r * Math.sin(a);   // 左右
-    const fy = r * Math.cos(a);   // 奥行き
-    const x = APEX.x + fx * SX + fy * DEPTH_X + pos * LAYER_DX;   // 横ずらし
-    const y = APEX.y - fy * DEPTH_Y - pos * LAYER_H;
+    const a = thetaDeg * Math.PI / 180;
+    const fx = r * Math.sin(a), fy = r * Math.cos(a);
+    const gx = fx*ca - fy*sa, gy = fx*sa + fy*ca;
+    // この段の「奥側の弧の中点(θ=45,最外周)」を常に APEX.x に揃える横オフセット
+    const br = RHO1 * LAYER_SCALE[pos], ba = Math.PI/4;
+    const bfx = br*Math.sin(ba), bfy = br*Math.cos(ba);
+    const bgx = bfx*ca - bfy*sa, bgy = bfx*sa + bfy*ca;
+    const offX = -(bgx*SX + bgy*DEPTH_X);
+    const x = APEX.x + gx*SX + gy*DEPTH_X + offX;
+    const y = APEX.y - gy*DEPTH_Y - pos*LAYER_H;
     return [x, y];
 }
 function sampleArc(rho, t0, t1, pos, n) {
@@ -329,6 +445,10 @@ const PBAND = (THETA1-THETA0)/PROJECTS.length;
 let NODES={}, OUT={}, BACK={}, NEIGH={}, EDGES=[];
 let scope = "all";   // "all"=チーム全体 / それ以外は案件ID
 let viewMode = "individual";   // "individual"=個別 / "cluster"=集約（段×種類で件数バブル）
+const tierVisible = new Set([0,1,2]);                 // 段フィルター
+const kindVisible = new Set(KINDS.map(k=>k.name));    // 種類フィルター
+const TIER_DOT = ["#374151", "#6b7280", "#9ca3af"];   // 段の識別ドット（濃=重要）
+const visFile = f => tierVisible.has(f.tier) && kindVisible.has(f.kind);
 
 function computeGraph() {
     const vis = scope==="all" ? PROJECTS : PROJECTS.filter(p=>p.id===scope);
@@ -345,16 +465,17 @@ function computeGraph() {
         NODES[f.id] = { file:f, project:p, tier:f.tier, pos, theta, rho, x, y };
     };
     if (scope==="all") {
-        // 案件ごとに角度帯を割り当てて全件表示
+        // 案件ごとに角度帯を割り当てて全件表示（フィルター適用）
         PROJECTS.forEach((p, pi) => {
-            const baseT = THETA0 + (pi+0.5)*PBAND, n = p.files.length;
-            p.files.forEach((f, k) => place(f, p, baseT + (n>1 ? (k/(n-1)-0.5)*(PBAND*0.6) : 0), k));
+            const baseT = THETA0 + (pi+0.5)*PBAND;
+            const files = p.files.filter(visFile), n = files.length;
+            files.forEach((f, k) => place(f, p, baseT + (n>1 ? (k/(n-1)-0.5)*(PBAND*0.6) : 0), k));
         });
     } else if (vis[0]) {
-        // 単一案件：各段ごとに扇全体へ広げて配置
+        // 単一案件：各段ごとに扇全体へ広げて配置（フィルター適用）
         const p = vis[0], lo = THETA0+8, hi = THETA1-8;
         [0,1,2].forEach(tier => {
-            const fs = p.files.filter(f=>f.tier===tier), m = fs.length;
+            const fs = p.files.filter(f=>f.tier===tier && visFile(f)), m = fs.length;
             fs.forEach((f,k) => place(f, p, m>1 ? lo+(k/(m-1))*(hi-lo) : (lo+hi)/2, k));
         });
     }
@@ -389,7 +510,8 @@ function buildGraph() {
     svgEl.innerHTML = "";
     const g = el("g",{}); svgEl.appendChild(g);
 
-    const slabFill = ["#f1f1f1", "#f7f7f7", "#fcfcfc"];
+    const slabTopFill  = ["#ffffff", "#fbfcfe", "#f6f9fc"];   // 上面：ほぼ白（フラット）
+    const slabSideFill = ["#dde4ec", "#dde4ec", "#dde4ec"];   // 側面：一定の中間グレーで厚みを表現
     for (let pos=0; pos<3; pos++) {
         const far  = sampleArc(RHO1, THETA0, THETA1, pos, 30);
         const near = sampleArc(RHO0, THETA1, THETA0, pos, 16);
@@ -399,8 +521,10 @@ function buildGraph() {
             .concat(sampleArc(RHO0, THETA1, THETA0, pos, 16))
             .concat([proj(RHO1,THETA0,pos)]);
         const frontDown = frontLine.map(p=>[p[0], p[1]+SLAB_T]).reverse();
-        g.appendChild(el("path",{ d: ptsToPath(frontLine.concat(frontDown), true), fill:"#e7e7e7", class:"slab-side" }));
-        g.appendChild(el("path",{ d: ptsToPath(top, true), fill: slabFill[pos], class:"slab-top" }));
+        const gs = el("g",{ class:"slab" });   // 段ごとに影をかけて浮かせる
+        gs.appendChild(el("path",{ d: ptsToPath(frontLine.concat(frontDown), true), fill:slabSideFill[pos], class:"slab-side" }));
+        gs.appendChild(el("path",{ d: ptsToPath(top, true), fill: slabTopFill[pos], class:"slab-top" }));
+        g.appendChild(gs);
 
         const [lx,ly] = proj(RHO1, THETA0, pos);
         const tier = TIERS[2-pos];
@@ -457,7 +581,7 @@ function buildGraph() {
 }
 
 function fitViewBox() {
-    const bb = svgEl.getBBox(); const pad = 22;
+    const bb = svgEl.getBBox(); const pad = 30;
     let x=bb.x-pad, y=bb.y-pad, w=bb.width+2*pad, h=bb.height+2*pad;
     const s = Math.max(w,h);
     x -= (s-w)/2; y -= (s-h)/2;
@@ -525,30 +649,75 @@ function openClusterInspector(grp){
 }
 function setModeButtons(){ document.querySelectorAll(".mode-seg button").forEach(b=>b.classList.toggle("on", b.dataset.mode===viewMode)); }
 
-function buildLegend() {
+function buildFilters() {
     $("tab-layer").innerHTML = TIERS.map(t=>`
-        <div class="li"><span class="sq" style="background:#f3f3f3"></span>
-            <span class="nm">${t.pos} · ${t.name}</span><span class="ds">${t.desc}</span></div>`).join("");
+        <button class="frow ${tierVisible.has(t.id)?'on':''}" data-tier="${t.id}">
+            <span class="chk"></span>
+            <span class="frow-body">
+                <span class="frow-nm"><span class="dot" style="background:${TIER_DOT[t.id]}"></span>${t.pos}<span class="frow-sub">${t.name}</span></span>
+                <span class="frow-ds">${t.desc}</span>
+            </span>
+        </button>`).join("");
     $("tab-kind").innerHTML = KINDS.map(k=>`
-        <div class="li"><span class="sw" style="background:${k.color}"></span><span class="nm">${k.name}</span></div>`).join("");
+        <button class="frow frow--kind ${kindVisible.has(k.name)?'on':''}" data-kind="${k.name}">
+            <span class="chk"></span>
+            <span class="frow-nm"><span class="dot" style="background:${k.color}"></span>${k.name}</span>
+        </button>`).join("");
+    $("tab-layer").querySelectorAll("[data-tier]").forEach(b=>b.addEventListener("click",()=>{
+        const t=+b.dataset.tier;
+        tierVisible.has(t)?tierVisible.delete(t):tierVisible.add(t);
+        if(tierVisible.size===0) tierVisible.add(t);
+        afterFilterChange();
+    }));
+    $("tab-kind").querySelectorAll("[data-kind]").forEach(b=>b.addEventListener("click",()=>{
+        const k=b.dataset.kind;
+        kindVisible.has(k)?kindVisible.delete(k):kindVisible.add(k);
+        if(kindVisible.size===0) kindVisible.add(k);
+        afterFilterChange();
+    }));
     document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{
         document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on", x===b));
         $("tab-layer").hidden = b.dataset.tab!=="layer";
         $("tab-kind").hidden  = b.dataset.tab!=="kind";
     }));
+    $("filter-reset").addEventListener("click",()=>{
+        tierVisible.clear(); [0,1,2].forEach(t=>tierVisible.add(t));
+        kindVisible.clear(); KINDS.forEach(k=>kindVisible.add(k.name));
+        afterFilterChange();
+    });
 }
+function filterActive(){ return tierVisible.size<3 || kindVisible.size<KINDS.length; }
+function syncFilterUI(){
+    document.querySelectorAll("[data-tier]").forEach(b=>b.classList.toggle("on", tierVisible.has(+b.dataset.tier)));
+    document.querySelectorAll("[data-kind]").forEach(b=>b.classList.toggle("on", kindVisible.has(b.dataset.kind)));
+    $("filter-reset").hidden = !filterActive();
+}
+function updateStatus(){
+    const shown = Object.keys(NODES).length;
+    const visP = scope==="all" ? PROJECTS : PROJECTS.filter(p=>p.id===scope);
+    const total = visP.flatMap(p=>p.files).length;
+    $("filter-status").textContent = filterActive() ? `表示中 ${shown} / ${total} 件` : "奥行き＝アップロード時期（手前ほど新しい）";
+    $("tl-count").textContent = `${shown}件`;
+}
+function afterFilterChange(){ syncFilterUI(); rebuildAll(); }
 
 function buildTimeline() {
     const sorted = Object.values(NODES).sort((a,b)=> (+new Date(b.file.uploadedAt)) - (+new Date(a.file.uploadedAt)));
-    $("tl-list").innerHTML = sorted.map(nd=>`
-        <li class="tl-row" data-id="${nd.file.id}">
+    let html="", curMonth="";
+    sorted.forEach(nd=>{
+        const ym = nd.file.uploadedAt.slice(0,7);            // YYYY-MM
+        if (ym!==curMonth){ curMonth=ym; html += `<li class="tl-group">${ym.slice(0,4)}年${ym.slice(5,7)}月</li>`; }
+        const dt = fmtDT(nd.file.uploadedAt).slice(5);        // MM-DD HH:MM
+        html += `<li class="tl-row" data-id="${nd.file.id}">
             <span class="tl-dot" style="background:${KIND_COLOR[nd.file.kind]}"></span>
             <div class="tl-main">
                 <div class="tl-name">${esc(nd.file.name)}</div>
-                <div class="tl-date mono">${esc(fmtDT(nd.file.uploadedAt))}</div>
+                <div class="tl-sub"><span class="tl-kind">${esc(nd.file.kind)}</span><span class="tl-date">${esc(dt)}</span></div>
             </div>
-            <span class="tl-tier">${TIERS[nd.tier].pos}</span>
-        </li>`).join("");
+            <span class="tl-tier t${nd.tier}">${TIERS[nd.tier].pos}</span>
+        </li>`;
+    });
+    $("tl-list").innerHTML = html || `<li class="tl-empty">該当するファイルがありません</li>`;
     $("tl-list").querySelectorAll(".tl-row").forEach(r=>{
         r.addEventListener("click", ()=>{ selected = r.dataset.id; render(); });
         r.addEventListener("mouseenter", ()=>{ if(!selected){ hover=r.dataset.id; render(); } });
@@ -557,24 +726,28 @@ function buildTimeline() {
 }
 
 /* ════════════════ 描画更新 ════════════════ */
+let _lastSel = null;
 function render() {
+    // フィルターで隠れた対象は選択/ホバー解除（エラー防止）
+    if (selected && !NODES[selected]) selected = null;
+    if (hover && !NODES[hover]) hover = null;
     const active = selected || hover;
     const neigh = active ? (NEIGH[active]||new Set()) : null;
 
     document.querySelectorAll("#nodes .node").forEach(c=>{
         const nd=NODES[c.dataset.id], baseR=nodeR(nd);
         if (active) {
-            if (c.dataset.id===active){ c.setAttribute("r",baseR+3); c.setAttribute("fill-opacity",1); }
-            else if (neigh.has(c.dataset.id)){ c.setAttribute("r",baseR); c.setAttribute("fill-opacity",1); }
-            else { c.setAttribute("r",baseR); c.setAttribute("fill-opacity",0.16); }
-        } else { c.setAttribute("r",baseR); c.setAttribute("fill-opacity",1); }
+            if (c.dataset.id===active){ c.setAttribute("r",baseR+4); c.setAttribute("fill-opacity",1); c.setAttribute("stroke-width","3"); }
+            else if (neigh.has(c.dataset.id)){ c.setAttribute("r",baseR); c.setAttribute("fill-opacity",1); c.setAttribute("stroke-width","2.4"); }
+            else { c.setAttribute("r",baseR); c.setAttribute("fill-opacity",0.1); c.setAttribute("stroke-width","2.4"); }
+        } else { c.setAttribute("r",baseR); c.setAttribute("fill-opacity",1); c.setAttribute("stroke-width","2.4"); }
     });
 
     document.querySelectorAll("#edges .edge").forEach(ln=>{
         const touch = active && (ln.dataset.a===active || ln.dataset.b===active);
-        if (touch){ ln.setAttribute("stroke","#141414"); ln.setAttribute("stroke-opacity",.95); ln.setAttribute("stroke-width",2); }
-        else if (active){ ln.setAttribute("stroke","#c7c7c7"); ln.setAttribute("stroke-opacity",.18); ln.setAttribute("stroke-width",1.1); }
-        else { ln.setAttribute("stroke","#c7c7c7"); ln.setAttribute("stroke-opacity",1); ln.setAttribute("stroke-width",1.2); }
+        if (touch){ ln.setAttribute("stroke","#2f6df6"); ln.setAttribute("stroke-opacity",.9); ln.setAttribute("stroke-width",2); }
+        else if (active){ ln.setAttribute("stroke","#c4cbd6"); ln.setAttribute("stroke-opacity",.12); ln.setAttribute("stroke-width",1.1); }
+        else { ln.setAttribute("stroke","#c4cbd6"); ln.setAttribute("stroke-opacity",1); ln.setAttribute("stroke-width",1.2); }
     });
 
     const fx=$("fx"); fx.innerHTML="";
@@ -582,16 +755,21 @@ function render() {
         const ids = new Set([active, ...neigh]);
         ids.forEach(id=>{
             const nd=NODES[id], isA=id===active;
-            if (isA) fx.appendChild(el("circle",{cx:nd.x, cy:nd.y, r:nodeR(nd)+8, class:"halo", stroke:"#111", "stroke-width":"2"}));
-            const t=el("text",{x:nd.x, y:nd.y - nodeR(nd) - 8, class:"nlabel"});
+            if (isA) fx.appendChild(el("circle",{cx:nd.x, cy:nd.y, r:nodeR(nd)+9, class:"halo", stroke:"#2f6df6", "stroke-width":"2.5"}));
+            const t=el("text",{x:nd.x, y:nd.y - nodeR(nd) - 9, class:"nlabel"});
             t.setAttribute("font-size", isA?14:12);
             t.textContent = trunc(stripExt(nd.file.name), isA?18:11);
             fx.appendChild(t);
         });
     }
 
-    // タイムラインの選択行ハイライト
+    // タイムラインの選択行ハイライト + 選択行へスクロール（中央⇄右の連動）
     document.querySelectorAll(".tl-row").forEach(r=>r.classList.toggle("on", r.dataset.id===active));
+    if (selected && selected!==_lastSel){
+        const r=document.querySelector('.tl-row[data-id="'+selected+'"]');
+        if(r) r.scrollIntoView({block:"nearest"});
+    }
+    _lastSel = selected;
 
     renderInspector();
 }
@@ -648,7 +826,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeAdd(); selec
 /* ════════════════ 追加・削除・保存 ════════════════ */
 const STORAGE_KEY = "datacake.added.v1";
 
-function rebuildAll(){ computeGraph(); buildGraph(); buildTimeline(); render(); }
+function rebuildAll(){ computeGraph(); buildGraph(); buildTimeline(); render(); updateStatus(); }
 
 function saveAdded(){
     const recs=[];
@@ -717,11 +895,12 @@ function submitAdd(){
 
 /* ── 初期化 ── */
 loadAdded();
-buildLegend();
+buildFilters();
 computeGraph();
 buildTimeline();
 buildGraph();
 render();
+updateStatus();
 
 // 表示スコープ（チーム全体 / 案件ごと）
 function buildScopeSelect(){
@@ -747,6 +926,16 @@ document.querySelectorAll("#mode-seg button").forEach(b=>b.addEventListener("cli
 
 svgEl.addEventListener("click", e => { if(!e.target.closest(".node") && !e.target.closest(".cluster")){ selected=null; hideTip(); render(); } });
 $("add-btn").addEventListener("click", openAdd);
+
+// マウスホイールで回転（ターンテーブル）。水平は保ったまま扇が回る。
+let _rotRaf=false;
+function scheduleRotate(){ if(_rotRaf) return; _rotRaf=true; requestAnimationFrame(()=>{ _rotRaf=false; computeGraph(); buildGraph(); render(); }); }
+svgEl.addEventListener("wheel", e=>{
+    e.preventDefault();
+    azimuth = Math.max(AZ_MIN, Math.min(AZ_MAX, azimuth + (e.deltaY>0?1:-1)*0.05));
+    hideTip(); scheduleRotate();
+}, { passive:false });
+svgEl.addEventListener("dblclick", ()=>{ azimuth=0; scheduleRotate(); });   // ダブルクリックで回転リセット
 $("addmodal").addEventListener("click", e=>{ if(e.target.id==="addmodal") closeAdd(); });
 $("af-cancel").addEventListener("click", closeAdd);
 $("af-submit").addEventListener("click", submitAdd);
