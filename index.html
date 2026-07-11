@@ -698,10 +698,3411 @@
 <div id="docPreviewModal" class="dp-modal" aria-hidden="true"></div>
 <div class="lightbox" id="lightbox"><img id="lightImg" alt=""/></div>
 
-<script src="js/demo-data.js"></script>
-<script src="js/app.js"></script>
-<script src="js/engines.js"></script>
-<script src="js/admin.js"></script>
+<script>
+/* =====================================================================
+   デモモード: バックエンド(/api/*)が見つからない時に、この内蔵データで
+   全機能を動かすモックAPI。実バックエンドがあればそちらが優先される。
+   ===================================================================== */
+
+const DEMO_GROUPS = [
+  {id:'g_all',   label:'全社'},
+  {id:'g_exec',  label:'経営'},
+  {id:'g_sales', label:'営業'},
+  {id:'g_dev',   label:'開発'},
+  {id:'g_hr',    label:'人事・労務'},
+];
+
+const DEMO_USERS = [
+  {id:'u_kido',     name:'木戸 隆正',  title:'代表・PM',       username:'kido',     password:'demo', role:'admin',  groups:['g_all','g_exec','g_sales','g_dev','g_hr']},
+  {id:'u_fukuda',   name:'福田 晟樹',  title:'開発エンジニア', username:'fukuda',   password:'demo', role:'member', groups:['g_all','g_dev']},
+  {id:'u_matsuura', name:'松浦 正醐',  title:'開発エンジニア', username:'matsuura', password:'demo', role:'member', groups:['g_all','g_dev']},
+  {id:'u_ninomiya', name:'二宮 石太郎',title:'営業',           username:'ninomiya', password:'demo', role:'member', groups:['g_all','g_sales']},
+];
+
+function demoDaysAgo(n, h, m){
+  const d = new Date();
+  d.setDate(d.getDate()-n);
+  d.setHours(h??10, m??0, 0, 0);
+  return d.toISOString();
+}
+
+let DEMO_DOCS = [
+  {id:'d01', title:'就業規則.pdf',                       doc_type:'規程',   importance:'core',        acl:['g_all'],            source:'ローカル取込', chunks:14, size_bytes:482000, updated_at:demoDaysAgo(48),
+    summary:'勤務時間・休日・服務規律などの基本規則。', content:'第1章 総則\n本規則は合同会社nerdechの従業員の就業条件を定める。\n勤務時間は9:30〜18:30（休憩1時間）。完全週休二日制（土日祝）。\n時間外勤務は事前申請制とする。'},
+  {id:'d02', title:'給与規程.docx',                      doc_type:'規程',   importance:'core',        acl:['g_hr','g_exec'],    source:'Google Drive', chunks:9,  size_bytes:88000,  updated_at:demoDaysAgo(41),
+    summary:'給与の締め日・支払日・各種手当の定め。', content:'給与の締め日は毎月末日とし、支払日は翌月25日（休日の場合は前営業日）に指定口座へ振り込む。\n通勤手当は月上限2万円。昇給は年1回（4月）。'},
+  {id:'d03', title:'経費精算マニュアル.md',               doc_type:'規程',   importance:'reference',   acl:['g_all'],            source:'ローカル取込', chunks:5,  size_bytes:12000,  updated_at:demoDaysAgo(30),
+    summary:'経費精算の申請方法と締切。', content:'経費は発生月の月末までに精算フォームで申請する。領収書の写真添付が必須。\n承認後、翌月の給与と合わせて振り込まれる。交通費はICカード履歴で代用可。'},
+  {id:'d04', title:'顧客名簿.xlsx',                      doc_type:'営業',   importance:'core',        acl:['g_sales','g_exec'], source:'Google Drive', chunks:7,  size_bytes:64000,  updated_at:demoDaysAgo(6),
+    summary:'取引先の担当者・連絡先一覧。', content:'ケアとーカー（担当:斎藤様）、クロノス（担当:田中様）、千歳開発（担当:佐藤様）ほか計12社の担当者・連絡先・取引状況を管理。'},
+  {id:'d05', title:'単価表_2026.xlsx',                   doc_type:'経理',   importance:'core',        acl:['g_exec'],           source:'Google Drive', chunks:4,  size_bytes:31000,  updated_at:demoDaysAgo(20),
+    summary:'開発・保守の標準単価表。', content:'受託開発の標準単価: エンジニア 80万円/人月。保守運用: 月額8万円〜。デザイン: 60万円/人月。値引きは代表承認が必要。'},
+  {id:'d06', title:'見積書_ケアとーカー.pdf',             doc_type:'経理',   importance:'core',        acl:['g_sales','g_exec'], source:'ローカル取込', chunks:3,  size_bytes:210000, updated_at:demoDaysAgo(12),
+    summary:'ケアとーカー案件の見積書。', content:'ケアとーカー様 御見積書\n初期開発費: 180万円（要件定義・設計・実装・テスト一式）\n月額保守: 8万円\n納期: 契約から3ヶ月。'},
+  {id:'d07', title:'請求書_クロノス案件.pdf',             doc_type:'経理',   importance:'core',        acl:['g_exec'],           source:'ローカル取込', chunks:2,  size_bytes:150000, updated_at:demoDaysAgo(3),
+    summary:'クロノス案件 2026年6月分の請求書。', content:'クロノス様 御請求書（2026年6月分）\nLP制作・保守費用: 24万円（税別）\n振込期限: 2026年7月末日。'},
+  {id:'d08', title:'業務委託契約書_雛形.docx',            doc_type:'契約',   importance:'core',        acl:['g_exec','g_sales'], source:'Google Drive', chunks:11, size_bytes:97000,  updated_at:demoDaysAgo(60),
+    summary:'受託案件で使う業務委託契約書のテンプレート。', content:'業務委託契約書（雛形）\n第1条（目的）乙は甲に対しソフトウェア開発業務を委託する。\n検収期間は納品後10営業日。知的財産権は検収完了時に甲へ移転。'},
+  {id:'d09', title:'提案書_ケアとーカー.pptx',            doc_type:'営業',   importance:'deliverable', acl:['g_sales','g_exec'], source:'ローカル取込', chunks:8,  size_bytes:56000,  updated_at:demoDaysAgo(14),
+    summary:'介護事業者向けシフト管理アプリの提案書。', content:'ケアとーカー様向け提案書。介護現場のシフト作成を自動化し、月20時間の管理業務を削減する提案。導入スケジュールと費用対効果を記載。'},
+  {id:'d10', title:'要件定義書_社内ナレッジAI_v0.2.docx', doc_type:'開発',   importance:'core',        acl:['g_dev','g_exec'],   source:'ローカル取込', chunks:22, size_bytes:38700,  updated_at:demoDaysAgo(11),
+    summary:'社内ナレッジ集約AIプラットフォームのMVP要件定義書。', content:'業務特化エージェント/権限継承RAG/セルフサーブ型。権限の壁: 質問者が閲覧権限を持つ資料のみから回答を生成する。F-01〜F-12の機能要件を定義。'},
+  {id:'d11', title:'MVP開発タスク一覧.md',                doc_type:'開発',   importance:'deliverable', acl:['g_dev'],            source:'ローカル取込', chunks:4,  size_bytes:9000,   updated_at:demoDaysAgo(1),
+    summary:'MVPの残タスクと担当割り。', content:'MVP残タスク:\n- F-04 差分同期のWebhook対応（松浦）\n- F-05 権限フィルタのテナント境界テスト（福田）\n- F-06 引用元リンクのUI仕上げ（福田）\n- DM/グループチャットUI（木戸レビュー待ち）'},
+  {id:'d12', title:'API設計メモ.md',                     doc_type:'開発',   importance:'deliverable', acl:['g_dev'],            source:'ローカル取込', chunks:6,  size_bytes:15000,  updated_at:demoDaysAgo(4),
+    summary:'ナレッジAIのAPIエンドポイント設計。', content:'POST /api/ask/stream: SSEで回答をストリーミング。meta→delta→doneの順にイベントを流す。\n全クエリにテナント境界とACLフィルタを強制する。'},
+  {id:'d13', title:'議事録_2026-06-30_定例.md',           doc_type:'議事録', importance:'reference',   acl:['g_all'],            source:'ローカル取込', chunks:3,  size_bytes:7000,   updated_at:demoDaysAgo(11),
+    summary:'6/30定例。MVPの範囲確定と役割分担。', content:'6/30 定例議事録\n- 要件定義書v0.2を確定\n- 入口は業務特化エージェント1本で行く\n- USB演出はプレゼン専用・非売品として扱う'},
+  {id:'d14', title:'議事録_2026-07-07_MVPレビュー.md',    doc_type:'議事録', importance:'reference',   acl:['g_all'],            source:'ローカル取込', chunks:3,  size_bytes:8000,   updated_at:demoDaysAgo(4),
+    summary:'7/7 MVPレビュー。権限の壁のデモが好評。', content:'7/7 MVPレビュー議事録\n- 権限フィルタ(F-05)のデモ実施。営業アカウントから経理資料が一切見えないことを確認\n- 次回はDM・グループチャットの統合デモ'},
+  {id:'d15', title:'有給休暇申請フロー.md',               doc_type:'規程',   importance:'reference',   acl:['g_all'],            source:'ローカル取込', chunks:2,  size_bytes:4000,   updated_at:demoDaysAgo(25),
+    summary:'有給休暇の申請手順。', content:'有給休暇は取得希望日の3営業日前までに申請フォームから申請する。承認者は直属の上長。半休は午前/午後の2区分。'},
+  {id:'d16', title:'採用面接メモ_2026.docx',              doc_type:'人事',   importance:'reference',   acl:['g_hr','g_exec'],    source:'Google Drive', chunks:5,  size_bytes:22000,  updated_at:demoDaysAgo(8),
+    summary:'2026年度採用の面接評価メモ。', content:'エンジニア採用の面接メモ。候補者3名の評価と所感。二次面接は代表同席で実施予定。'},
+  {id:'d17', title:'保守運用手順書.md',                   doc_type:'開発',   importance:'deliverable', acl:['g_dev'],            source:'ローカル取込', chunks:7,  size_bytes:18000,  updated_at:demoDaysAgo(17),
+    summary:'納品後の保守・障害対応の手順。', content:'障害発生時はまず影響範囲を特定し、顧客へ一次報告（30分以内）。復旧後に恒久対応と再発防止策をまとめて報告する。'},
+  {id:'d18', title:'ヒアリングシート_雛形.docx',          doc_type:'営業',   importance:'deliverable', acl:['g_sales'],          source:'Google Drive', chunks:3,  size_bytes:14000,  updated_at:demoDaysAgo(33),
+    summary:'新規案件ヒアリング用の質問テンプレート。', content:'新規案件ヒアリングシート。現状の課題・予算感・希望納期・意思決定者・既存システムの有無を確認する。'},
+];
+
+const DEMO_TEMPLATES_COMMON = [
+  {label:'給与の締め日は？',        query:'給与の締め日はいつですか？'},
+  {label:'有給休暇の申請方法は？',  query:'有給休暇の申請方法を教えてください'},
+  {label:'経費精算の締切は？',      query:'経費精算の締切はいつですか？'},
+];
+const DEMO_TEMPLATES_BY_GROUP = {
+  g_sales:[{label:'ケアとーカーの見積金額は？', query:'ケアとーカー案件の見積金額はいくらですか？'}],
+  g_dev:  [{label:'MVPの残タスクは？',          query:'MVPの残タスクを教えて'}],
+  g_exec: [{label:'開発の標準単価は？',          query:'受託開発の標準単価はいくら？'}],
+};
+
+/* 質問→回答のルール(デモ用の簡易RAG)。keysが全て含まれる質問に反応する */
+const DEMO_QA = [
+  {keys:['給与','締め'],       docIds:['d02'], answer:'給与の締め日は毎月末日です。支払日は翌月25日（休日の場合は前営業日）に指定口座へ振り込まれます。'},
+  {keys:['給与'],              docIds:['d02'], answer:'給与規程によると、締め日は毎月末日・支払日は翌月25日です。通勤手当は月上限2万円、昇給は年1回（4月）です。'},
+  {keys:['有給'],              docIds:['d15'], answer:'有給休暇は、取得希望日の3営業日前までに申請フォームから申請します。承認者は直属の上長で、半休（午前/午後）も取得できます。'},
+  {keys:['経費'],              docIds:['d03'], answer:'経費は発生月の月末までに精算フォームで申請してください。領収書の写真添付が必須です。承認後、翌月の給与と合わせて振り込まれます。'},
+  {keys:['見積','ケアとーカー'],docIds:['d06','d09'], answer:'ケアとーカー案件の見積は、初期開発費180万円（要件定義〜テスト一式）＋月額保守8万円です。納期は契約から3ヶ月とされています。'},
+  {keys:['単価'],              docIds:['d05'], answer:'受託開発の標準単価はエンジニア80万円/人月、デザイン60万円/人月です。保守運用は月額8万円〜。値引きには代表承認が必要です。'},
+  {keys:['残タスク'],          docIds:['d11'], answer:'MVPの残タスクは次の4件です。\n・F-04 差分同期のWebhook対応（松浦）\n・F-05 権限フィルタのテナント境界テスト（福田）\n・F-06 引用元リンクのUI仕上げ（福田）\n・DM/グループチャットUI（木戸レビュー待ち）'},
+  {keys:['MVP','タスク'],      docIds:['d11'], answer:'MVPの残タスクは、F-04 差分同期のWebhook対応、F-05 権限フィルタのテスト、F-06 引用元リンクのUI仕上げ、DM/グループチャットUIのレビューです。'},
+  {keys:['請求','クロノス'],   docIds:['d07'], answer:'クロノス案件の2026年6月分請求は、LP制作・保守費用24万円（税別）、振込期限は2026年7月末日です。'},
+  {keys:['契約','検収'],       docIds:['d08'], answer:'業務委託契約書の雛形では、検収期間は納品後10営業日、知的財産権は検収完了時に発注者へ移転すると定めています。'},
+  {keys:['勤務','時間'],       docIds:['d01'], answer:'勤務時間は9:30〜18:30（休憩1時間）です。完全週休二日制（土日祝）で、時間外勤務は事前申請制です。'},
+  {keys:['障害'],              docIds:['d17'], answer:'障害発生時は、まず影響範囲を特定し30分以内に顧客へ一次報告します。復旧後に恒久対応と再発防止策をまとめて報告します。'},
+  {keys:['顧客','担当'],       docIds:['d04'], answer:'顧客名簿には、ケアとーカー（斎藤様）、クロノス（田中様）、千歳開発（佐藤様）ほか計12社の担当者・連絡先が登録されています。'},
+];
+
+/* ---- 業務構造(AI推定の業務フロー) ---- */
+const DEMO_STRUCTURE = {
+  title:'受託開発の業務フロー',
+  stages:[
+    {id:'s1', name:'問い合わせ', health:'thin', doc_ids:['d18'], doc_titles:['ヒアリングシート_雛形.docx'],
+      description:'新規の相談・引き合いを受け付ける工程。', note:'問い合わせの記録が雛形1件のみ。実際のやりとりの記録が残っていません。'},
+    {id:'s2', name:'ヒアリング', health:'ok', doc_ids:['d18','d13'], doc_titles:['ヒアリングシート_雛形.docx','議事録_2026-06-30_定例.md'],
+      description:'課題・予算・納期・意思決定者を確認する工程。'},
+    {id:'s3', name:'見積', health:'ok', doc_ids:['d05','d06'], doc_titles:['単価表_2026.xlsx','見積書_ケアとーカー.pdf'],
+      description:'単価表をもとに見積書を作成・提示する工程。'},
+    {id:'s4', name:'契約', health:'thin', doc_ids:['d08'], doc_titles:['業務委託契約書_雛形.docx'],
+      description:'契約書を締結する工程。', note:'雛形のみで、締結済み契約書の控えがナレッジに入っていません。'},
+    {id:'s5', name:'制作', health:'ok', doc_ids:['d10','d11','d12'], doc_titles:['要件定義書_社内ナレッジAI_v0.2.docx','MVP開発タスク一覧.md','API設計メモ.md'],
+      description:'要件定義・設計・実装を行う工程。'},
+    {id:'s6', name:'検収', health:'gap', doc_ids:[], doc_titles:[],
+      description:'納品物を顧客に確認してもらう工程。', note:'検収記録に該当する資料が見つかりません。検収書のテンプレートと控えの保存を推奨します。'},
+    {id:'s7', name:'請求', health:'ok', doc_ids:['d07'], doc_titles:['請求書_クロノス案件.pdf'],
+      description:'請求書を発行し入金を確認する工程。'},
+    {id:'s8', name:'保守', health:'thin', doc_ids:['d17'], doc_titles:['保守運用手順書.md'],
+      description:'納品後の保守・障害対応を行う工程。', note:'手順書はあるが、対応履歴が蓄積されていません。'},
+  ],
+  flows:[
+    {from:'s1',to:'s2'},{from:'s2',to:'s3'},{from:'s3',to:'s4'},{from:'s4',to:'s5'},
+    {from:'s5',to:'s6'},{from:'s6',to:'s7'},{from:'s7',to:'s8'},
+  ],
+};
+
+/* ---- AI改善提案(管理者向け) ---- */
+let DEMO_INSIGHTS = {
+  created_at: demoDaysAgo(2, 15, 30),
+  report:{
+    summary:'検収と契約の記録が薄く、経理系ナレッジが経営グループに集中しています。まずは検収書テンプレートの整備と、給与・経費まわりのFAQ化を推奨します。',
+    findings:[
+      {category:'gap', title:'検収工程の記録が存在しない',
+        detail:'業務フロー上の「検収」に対応する資料が1件もありません。トラブル時に検収完了を証明できないリスクがあります。',
+        evidence_titles:['業務委託契約書_雛形.docx'], suggestion:'検収書のテンプレートを作成し、案件ごとに控えをナレッジDBへ保存する運用にしましょう。'},
+      {category:'bottleneck', title:'経理資料が経営グループに集中',
+        detail:'単価表・請求書などの経理系資料の閲覧権限が経営グループのみに設定されており、営業が見積時に単価を確認できず質問が繰り返されています。',
+        evidence_titles:['単価表_2026.xlsx','請求書_クロノス案件.pdf'], suggestion:'単価表の閲覧権限に営業グループを追加するか、営業向けの単価早見資料を作成しましょう。'},
+      {category:'duplication', title:'議事録の保存先が2系統',
+        detail:'議事録がローカル取込とGoogle Driveの両方に散在し始めています。検索精度と更新漏れの原因になります。',
+        evidence_titles:['議事録_2026-06-30_定例.md','議事録_2026-07-07_MVPレビュー.md'], suggestion:'議事録の保存先をどちらか1系統に統一し、命名規則（日付_件名）を固定しましょう。'},
+      {category:'opportunity', title:'給与・経費の質問はFAQ化で削減できる',
+        detail:'給与の締め日・経費精算の締切など、同じ質問が繰り返し聞かれています。',
+        evidence_titles:['給与規程.docx','経費精算マニュアル.md'], suggestion:'頻出質問トップ5をまとめた「入社後よくある質問.md」を全社公開で作成しましょう。'},
+    ],
+  },
+};
+
+/* ---- メンバーAI定性分析 ---- */
+let DEMO_MEMBER_ANALYSIS = {
+  created_at: demoDaysAgo(2, 15, 40),
+  analysis:{
+    org_note:'質問の中心は労務・経理の基本ルールです。開発メンバーの質問が権限ブロックされる比率が高く、公開範囲の見直し余地があります。',
+    members:[
+      {user_id:'u_kido', name:'木戸 隆正', inferred_role:'経営・案件管理の中心',
+        summary:'見積・請求・契約など案件のお金まわりの質問が中心。全資料にアクセスできるため未回答はほぼありません。',
+        gaps:['検収・納品まわりの記録'], risks:['経理系ナレッジの属人化（本人しか把握していない）'],
+        suggestion:'経理系資料の要約版を営業と共有すると、確認質問が減ります。'},
+      {user_id:'u_fukuda', name:'福田 晟樹', inferred_role:'開発の実装担当',
+        summary:'開発タスク・API設計の質問が中心。労務系（給与・経費）の質問で権限ブロックが発生しています。',
+        gaps:['開発環境の構築手順書'], risks:['労務情報へアクセスできず総務への口頭確認が発生'],
+        suggestion:'給与規程の公開範囲を全社にするか、要点のみのFAQを全社公開しましょう。'},
+      {user_id:'u_matsuura', name:'松浦 正醐', inferred_role:'開発（同期・インフラ担当）',
+        summary:'差分同期・障害対応の質問が中心。保守運用手順書をよく参照しています。',
+        gaps:['過去の障害対応履歴'], risks:[], suggestion:'障害対応のたびに対応記録をナレッジへ残す運用を徹底しましょう。'},
+      {user_id:'u_ninomiya', name:'二宮 石太郎', inferred_role:'営業・顧客窓口',
+        summary:'見積・提案・顧客情報の質問が中心。単価表へアクセスできず見積作成時にブロックが発生しています。',
+        gaps:['営業向けの単価早見資料'], risks:['単価を口頭確認しており誤った金額を提示するリスク'],
+        suggestion:'単価表の閲覧権限に営業を追加するか、営業向け単価資料を整備しましょう。'},
+    ],
+  },
+};
+
+/* ---- 監査ログ(シード。ask実行のたびに追記される) ---- */
+function demoSeedAudit(){
+  const seed=[
+    // [daysAgo, hour, userId, query, result('ok'|'blocked'|'gap'), citedDocIds]
+    [13,10,'u_fukuda','有給休暇の申請方法を教えてください','ok',['d15']],
+    [13,11,'u_ninomiya','ケアとーカーの担当者は誰？','ok',['d04']],
+    [12,9, 'u_fukuda','給与の締め日はいつですか？','blocked',[]],
+    [12,14,'u_matsuura','障害発生時の一次報告の期限は？','ok',['d17']],
+    [11,10,'u_kido','クロノス案件の請求金額は？','ok',['d07']],
+    [11,15,'u_ninomiya','受託開発の標準単価はいくら？','blocked',[]],
+    [10,9, 'u_fukuda','経費精算の締切はいつですか？','ok',['d03']],
+    [10,11,'u_matsuura','差分同期のAPI仕様は？','ok',['d12']],
+    [9, 10,'u_ninomiya','ケアとーカー案件の見積金額はいくらですか？','ok',['d06','d09']],
+    [9, 16,'u_fukuda','社用PCの購入申請はどうすればいい？','gap',[]],
+    [8, 9, 'u_kido','検収期間は納品後何日？','ok',['d08']],
+    [8, 13,'u_matsuura','経費精算の締切はいつですか？','ok',['d03']],
+    [7, 10,'u_ninomiya','提案書の雛形はどこ？','ok',['d09','d18']],
+    [7, 15,'u_fukuda','MVPの残タスクを教えて','ok',['d11']],
+    [6, 9, 'u_kido','採用面接の候補者の評価は？','ok',['d16']],
+    [6, 11,'u_ninomiya','単価の値引きは誰の承認が必要？','blocked',[]],
+    [6, 17,'u_matsuura','リモートワークの規定はある？','gap',[]],
+    [5, 10,'u_fukuda','勤務時間は何時から？','ok',['d01']],
+    [5, 14,'u_kido','ケアとーカー案件の見積金額はいくらですか？','ok',['d06']],
+    [4, 9, 'u_ninomiya','契約書の雛形をください','ok',['d08']],
+    [4, 11,'u_fukuda','給与の締め日はいつですか？','blocked',[]],
+    [4, 16,'u_matsuura','MVPの残タスクを教えて','ok',['d11']],
+    [3, 10,'u_kido','6月の請求はいくら？','ok',['d07']],
+    [3, 13,'u_ninomiya','慶弔休暇は何日もらえる？','gap',[]],
+    [2, 9, 'u_fukuda','有給休暇の申請方法を教えてください','ok',['d15']],
+    [2, 11,'u_matsuura','障害対応の再発防止はどうまとめる？','ok',['d17']],
+    [2, 15,'u_ninomiya','ケアとーカーの提案のポイントは？','ok',['d09']],
+    [1, 10,'u_kido','MVPレビューの結果は？','ok',['d14']],
+    [1, 14,'u_fukuda','経費精算の締切はいつですか？','ok',['d03']],
+    [1, 16,'u_ninomiya','給与の締め日はいつですか？','blocked',[]],
+  ];
+  return seed.map(([days,hour,uid,query,result,cited])=>{
+    const u=DEMO_USERS.find(x=>x.id===uid);
+    const vis=DEMO_DOCS.filter(d=>d.acl.some(g=>u.groups.includes(g))).length;
+    return {
+      at: demoDaysAgo(days, hour),
+      user_id: uid, user_name: u.name,
+      query, blocked: result==='blocked', gap: result==='gap',
+      cited: cited.map(id=>{const d=DEMO_DOCS.find(x=>x.id===id); return d?d.title:id;}),
+      cited_ids: cited.slice(),
+      visible_docs: vis, total_docs: DEMO_DOCS.length,
+    };
+  });
+}
+let DEMO_AUDIT = demoSeedAudit();
+
+/* ============== ここからモックAPIルーター ============== */
+
+function demoVisibleDocs(user){
+  return DEMO_DOCS.filter(d=>d.acl.some(g=>user.groups.includes(g)));
+}
+function demoAclLabel(acl){
+  return acl.map(id=>{const g=DEMO_GROUPS.find(x=>x.id===id); return g?g.label:id;}).join('・');
+}
+function demoUserByToken(headers){
+  const auth=(headers&&(headers.Authorization||headers.authorization))||'';
+  const token=auth.replace(/^Bearer\s+/,'');
+  if(!token.startsWith('demo-')) return null;
+  return DEMO_USERS.find(u=>u.id===token.slice(5)) || null;
+}
+function demoTemplates(user){
+  let t=DEMO_TEMPLATES_COMMON.slice();
+  user.groups.forEach(g=>{ if(DEMO_TEMPLATES_BY_GROUP[g]) t=t.concat(DEMO_TEMPLATES_BY_GROUP[g]); });
+  return t.slice(0,5);
+}
+
+/* デモの質問応答。回答/権限ブロック/資料なしを判定して監査ログにも記録する */
+function demoAsk(query, user){
+  const q=(query||'').toLowerCase();
+  let hit=null;
+  for(const rule of DEMO_QA){
+    if(rule.keys.every(k=>q.includes(k.toLowerCase()))){ hit=rule; break; }
+  }
+  // ルールに当たらなければ、タイトル/要約/本文の部分一致で拾う
+  let docs=[];
+  if(hit){
+    docs=hit.docIds.map(id=>DEMO_DOCS.find(d=>d.id===id)).filter(Boolean);
+  }else{
+    const tokens=q.split(/[\s、。・？?！!の は を に で と…]+/).filter(t=>t.length>=2);
+    docs=DEMO_DOCS.filter(d=>tokens.some(t=>(d.title+d.summary+d.content).toLowerCase().includes(t)));
+  }
+  const visible=docs.filter(d=>d.acl.some(g=>user.groups.includes(g)));
+  const visCount=demoVisibleDocs(user).length;
+
+  let res;
+  if(docs.length && !visible.length){
+    res={blocked:true, gap:false, answer:'あなたの権限では、この質問に該当する社内資料を参照できません。', sources:[],
+      user:{name:user.name,title:user.title}, visible_docs:visCount, total_docs:DEMO_DOCS.length};
+  }else if(!docs.length){
+    res={blocked:false, gap:true, answer:'該当する社内資料が見つかりませんでした。この質問は「ナレッジの穴」として記録され、管理コンソールのFAQ化候補に表示されます。', sources:[],
+      visible_docs:visCount, total_docs:DEMO_DOCS.length};
+  }else{
+    const answer = hit ? hit.answer
+      : `「${visible[0].title.replace(/(?:\.[A-Za-z0-9]{1,5}){1,3}$/,'')}」によると——\n${visible[0].content.split('\n')[0]}`;
+    res={blocked:false, gap:false, answer,
+      sources:visible.slice(0,3).map(d=>({doc_id:d.id, title:d.title, source:d.source, acl_label:demoAclLabel(d.acl)})),
+      visible_docs:visCount, total_docs:DEMO_DOCS.length};
+  }
+  DEMO_AUDIT.push({
+    at:new Date().toISOString(), user_id:user.id, user_name:user.name, query,
+    blocked:res.blocked, gap:!!res.gap,
+    cited:(res.sources||[]).map(s=>s.title), cited_ids:(res.sources||[]).map(s=>s.doc_id),
+    visible_docs:visCount, total_docs:DEMO_DOCS.length,
+  });
+  return res;
+}
+
+/* 監査ログから集計(ダッシュボード・メンバー統計) */
+function demoDailySeries(filterFn){
+  const days=[];
+  for(let i=13;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    days.push({date:key, count:0, blocked:0, gap:0});
+  }
+  DEMO_AUDIT.filter(filterFn||(()=>true)).forEach(l=>{
+    const key=l.at.slice(0,10);
+    const day=days.find(x=>x.date===key);
+    if(!day) return;
+    day.count++;
+    if(l.blocked) day.blocked++;
+    if(l.gap) day.gap++;
+  });
+  return days;
+}
+function demoAuditPayload(){
+  const log=DEMO_AUDIT.slice().reverse();
+  const total=DEMO_AUDIT.length;
+  const blocked=DEMO_AUDIT.filter(l=>l.blocked).length;
+  const gap=DEMO_AUDIT.filter(l=>l.gap).length;
+  const recent=DEMO_AUDIT.slice(-20);
+  const byQ={};
+  DEMO_AUDIT.forEach(l=>{
+    const k=l.query;
+    (byQ[k]=byQ[k]||{question:k,count:0,last_user:'',last_asked:'',gap:l.gap}).count++;
+    byQ[k].last_user=l.user_name; byQ[k].last_asked=l.at; byQ[k].gap=byQ[k].gap&&l.gap;
+  });
+  const allQ=Object.values(byQ);
+  const cite={};
+  DEMO_AUDIT.forEach(l=>(l.cited_ids||[]).forEach(id=>{cite[id]=(cite[id]||0)+1;}));
+  const typeDist={};
+  Object.entries(cite).forEach(([id,c])=>{
+    const d=DEMO_DOCS.find(x=>x.id===id); if(!d) return;
+    typeDist[d.doc_type]=(typeDist[d.doc_type]||0)+c;
+  });
+  return {
+    log,
+    stats:{
+      total, answered:total-blocked-gap, blocked, knowledge_gap:gap,
+      recent_window:{n:recent.length,
+        answered:recent.filter(l=>!l.blocked&&!l.gap).length,
+        blocked:recent.filter(l=>l.blocked).length,
+        gap:recent.filter(l=>l.gap).length},
+    },
+    org_daily: demoDailySeries(),
+    top_questions: allQ.filter(x=>!x.gap).sort((a,b)=>b.count-a.count).slice(0,8),
+    knowledge_gaps: allQ.filter(x=>x.gap).sort((a,b)=>b.count-a.count).slice(0,6),
+    doc_type_distribution: Object.entries(typeDist).map(([doc_type,count])=>({doc_type,count})).sort((a,b)=>b.count-a.count),
+    top_cited_docs: Object.entries(cite).map(([id,count])=>{
+      const d=DEMO_DOCS.find(x=>x.id===id);
+      return {title:d?d.title:id, doc_type:d?d.doc_type:'', count};
+    }).sort((a,b)=>b.count-a.count).slice(0,6),
+    thin_citation_count: DEMO_AUDIT.filter(l=>(l.cited_ids||[]).length===1).length,
+  };
+}
+function demoMemberStats(scopeUser){
+  // 管理コンソールは全メンバーを表示する。分析ビュー(一般ユーザー個人向け)は
+  // 呼び出し側で自分の行だけに絞り込むため、ここでは常に全員分を返してよい。
+  const members=DEMO_USERS.map(u=>{
+    const mine=DEMO_AUDIT.filter(l=>l.user_id===u.id);
+    const types={};
+    mine.forEach(l=>(l.cited_ids||[]).forEach(id=>{
+      const d=DEMO_DOCS.find(x=>x.id===id); if(!d) return;
+      types[d.doc_type]=(types[d.doc_type]||0)+1;
+    }));
+    return {
+      user_id:u.id, name:u.name, title:u.title,
+      question_count:mine.length,
+      blocked_count:mine.filter(l=>l.blocked).length,
+      unanswered_count:mine.filter(l=>l.gap).length,
+      top_doc_types:Object.entries(types).map(([doc_type,count])=>({doc_type,count})).sort((a,b)=>b.count-a.count).slice(0,3),
+      daily:demoDailySeries(l=>l.user_id===u.id),
+      last_active:mine.length?mine[mine.length-1].at:null,
+    };
+  });
+  return {members, org_daily:demoDailySeries()};
+}
+function demoGraph(user){
+  const vis=demoVisibleDocs(user);
+  const ids=new Set(vis.map(d=>d.id));
+  const REL=[
+    ['d05','d06',.9],['d06','d09',.85],['d05','d07',.7],['d06','d07',.6],['d08','d06',.55],
+    ['d10','d11',.9],['d10','d12',.8],['d11','d12',.75],['d10','d14',.5],['d12','d17',.6],
+    ['d13','d14',.7],['d13','d10',.45],['d18','d09',.65],['d18','d04',.6],['d04','d09',.55],
+    ['d02','d03',.5],['d01','d15',.6],['d01','d02',.45],['d16','d01',.4],['d08','d17',.35],
+  ];
+  const typeCount={};
+  vis.forEach(d=>{typeCount[d.doc_type]=(typeCount[d.doc_type]||0)+1;});
+  return {
+    nodes:vis.map(d=>({id:d.id,title:d.title,doc_type:d.doc_type,importance:d.importance,updated_at:d.updated_at,summary:d.summary})),
+    edges:REL.filter(([a,b])=>ids.has(a)&&ids.has(b)).map(([source,target,weight])=>({source,target,weight})),
+    types:Object.entries(typeCount).map(([name,count])=>({name,count})),
+  };
+}
+
+const mkRes=(status,data)=>({ok:status<300, status, json:async()=>data});
+
+let DEMO_STRUCTURE_GENERATED=true; // 最初から生成済みで見せる
+let demoDocSeq=100;
+
+async function demoApi(url, opts){
+  opts=opts||{};
+  const method=(opts.method||'GET').toUpperCase();
+  const path=url.split('?')[0];
+  const body=(()=>{ try{ return typeof opts.body==='string'?JSON.parse(opts.body):null; }catch(e){ return null; } })();
+
+  // 認証不要
+  if(path==='/api/demo-accounts') return mkRes(200,{accounts:DEMO_USERS.map(u=>({username:u.username,password:u.password,name:u.name,title:u.title}))});
+  if(path==='/api/login'&&method==='POST'){
+    const u=DEMO_USERS.find(x=>x.username===(body&&body.username));
+    if(!u||u.password!==(body&&body.password)) return mkRes(401,{error:'ユーザー名またはパスワードが違います'});
+    return mkRes(200,{token:'demo-'+u.id});
+  }
+
+  const user=demoUserByToken(opts.headers);
+  if(!user) return mkRes(401,{error:'auth'});
+
+  if(path==='/api/me') return mkRes(200,{
+    user:{id:user.id,name:user.name,title:user.title,role:user.role,groups:user.groups,
+      group_labels:user.groups.map(g=>{const gg=DEMO_GROUPS.find(x=>x.id===g);return gg?gg.label:g;})},
+    templates:demoTemplates(user), ai_enabled:true,
+    visible_docs:demoVisibleDocs(user).length, total_docs:DEMO_DOCS.length,
+    org_name:'合同会社nerdech',
+  });
+  if(path==='/api/logout') return mkRes(200,{});
+
+  if(path==='/documents') return mkRes(200, demoVisibleDocs(user).map(d=>({
+    id:d.id,title:d.title,doc_type:d.doc_type,importance:d.importance,updated_at:d.updated_at,summary:d.summary,size_bytes:d.size_bytes})));
+
+  if(path==='/ingest'&&method==='POST'){
+    const fd=opts.body;
+    const f=fd&&fd.get?fd.get('file'):null;
+    const title=f?f.name:('アップロード資料'+(demoDocSeq));
+    let content='';
+    try{ if(f&&/\.(txt|md|markdown|csv|json|log)$/i.test(f.name)) content=await f.text(); }catch(e){}
+    DEMO_DOCS.push({id:'d'+(demoDocSeq++), title, doc_type:'一般', importance:'deliverable',
+      acl:user.groups.filter(g=>g!=='g_all').concat(['g_all']).slice(0,1).length?['g_all']:['g_all'],
+      source:'Web取込', chunks:Math.max(1,Math.round((content.length||3000)/800)),
+      size_bytes:(f&&f.size)||3000, updated_at:new Date().toISOString(),
+      summary:'Webからアップロードされた資料。', content:content||'（プレビュー可能な本文がありません）'});
+    return mkRes(200,{ok:true});
+  }
+
+  if(path==='/api/graph') return mkRes(200, demoGraph(user));
+
+  if(path==='/api/structure') return mkRes(200,{map:DEMO_STRUCTURE_GENERATED?DEMO_STRUCTURE:null});
+  if(path==='/api/structure/generate'&&method==='POST'){
+    await new Promise(r=>setTimeout(r,1600));
+    DEMO_STRUCTURE_GENERATED=true;
+    return mkRes(200,{map:DEMO_STRUCTURE});
+  }
+
+  if(path==='/api/members/stats') return mkRes(200, demoMemberStats(user));
+  if(path==='/api/members/analysis'){
+    // 全メンバー分を返す。分析ビュー(個人向け)は呼び出し側で自分の行に絞り込む。
+    const a=DEMO_MEMBER_ANALYSIS;
+    return mkRes(200,{analysis:{org_note:a.analysis.org_note,members:a.analysis.members},created_at:a.created_at});
+  }
+  if(path==='/api/members/analyze'&&method==='POST'){
+    await new Promise(r=>setTimeout(r,1400));
+    DEMO_MEMBER_ANALYSIS.created_at=new Date().toISOString();
+    return mkRes(200, {analysis:DEMO_MEMBER_ANALYSIS.analysis, created_at:DEMO_MEMBER_ANALYSIS.created_at});
+  }
+
+  const mPrev=path.match(/^\/api\/documents\/([^/]+)\/preview$/);
+  if(mPrev){
+    const d=DEMO_DOCS.find(x=>x.id===decodeURIComponent(mPrev[1]));
+    if(!d) return mkRes(404,{error:'not found'});
+    if(!d.acl.some(g=>user.groups.includes(g))) return mkRes(403,{error:'forbidden'});
+    return mkRes(200,{title:d.title,doc_type:d.doc_type,importance:d.importance,updated_at:d.updated_at,
+      source:d.source,summary:d.summary,content:d.content});
+  }
+
+  /* ---- 管理系(このデモでは一般ユーザーも管理コンソールを閲覧・操作できる) ---- */
+  if(path==='/api/admin/status') return mkRes(200,{documents:DEMO_DOCS.map(d=>({
+    id:d.id,title:d.title,source:d.source,acl:d.acl,acl_label:demoAclLabel(d.acl),chunks:d.chunks}))});
+
+  if(path==='/api/admin/users'&&method==='GET') return mkRes(200,{
+    users:DEMO_USERS.map(u=>({id:u.id,name:u.name,title:u.title,username:u.username,role:u.role,groups:u.groups,
+      group_labels:u.groups.map(g=>{const gg=DEMO_GROUPS.find(x=>x.id===g);return gg?gg.label:g;})})),
+    groups:DEMO_GROUPS.slice()});
+  if(path==='/api/admin/users'&&method==='POST'){
+    if(!body||!body.username) return mkRes(400,{error:'ログイン名は必須です'});
+    if(DEMO_USERS.some(u=>u.username===body.username)) return mkRes(400,{error:'そのログイン名は使われています'});
+    DEMO_USERS.push({id:'u_'+body.username,name:body.name||body.username,title:body.title||'',username:body.username,
+      password:body.password||'demo',role:body.role||'member',groups:body.groups||['g_all']});
+    return mkRes(200,{ok:true});
+  }
+  const mUser=path.match(/^\/api\/admin\/users\/([^/]+)$/);
+  if(mUser){
+    const u=DEMO_USERS.find(x=>x.id===decodeURIComponent(mUser[1]));
+    if(!u) return mkRes(404,{error:'not found'});
+    if(method==='PUT'){
+      Object.assign(u,{name:body.name??u.name,title:body.title??u.title,username:body.username??u.username,
+        role:body.role??u.role,groups:body.groups??u.groups});
+      if(body.password) u.password=body.password;
+      return mkRes(200,{ok:true});
+    }
+    if(method==='DELETE'){
+      const i=DEMO_USERS.indexOf(u); DEMO_USERS.splice(i,1);
+      return mkRes(200,{ok:true});
+    }
+  }
+  if(path==='/api/admin/groups'&&method==='POST'){
+    if(!body||!body.id||!body.label) return mkRes(400,{error:'IDと表示名を入力してください'});
+    if(DEMO_GROUPS.some(g=>g.id===body.id)) return mkRes(400,{error:'そのIDは使われています'});
+    DEMO_GROUPS.push({id:body.id,label:body.label});
+    return mkRes(200,{ok:true});
+  }
+  if(path==='/api/admin/audit') return mkRes(200, demoAuditPayload());
+  if(path==='/api/admin/insights'&&method==='GET') return mkRes(200, DEMO_INSIGHTS);
+  if(path==='/api/admin/insights'&&method==='POST'){
+    await new Promise(r=>setTimeout(r,1600));
+    DEMO_INSIGHTS.created_at=new Date().toISOString();
+    return mkRes(200, DEMO_INSIGHTS);
+  }
+  if(path==='/api/admin/documents'&&method==='POST'){
+    const fd=opts.body;
+    const f=fd&&fd.get?fd.get('file'):null;
+    if(!f) return mkRes(400,{error:'ファイルを選んでください'});
+    const title=(fd.get('title')||'').trim()||f.name;
+    const acl=((fd.get('acl')||'')+'').split(',').filter(Boolean);
+    let content='';
+    try{ if(/\.(txt|md|markdown|csv|json|log|html?)$/i.test(f.name)) content=await f.text(); }catch(e){}
+    DEMO_DOCS.push({id:'d'+(demoDocSeq++), title, doc_type:'一般', importance:'reference',
+      acl:acl.length?acl:['g_all'], source:'管理者アップロード',
+      chunks:Math.max(1,Math.round((content.length||3000)/800)), size_bytes:f.size||3000,
+      updated_at:new Date().toISOString(), summary:'管理コンソールから取り込まれた資料。',
+      content:content||'（プレビュー可能な本文がありません）'});
+    return mkRes(200,{ok:true});
+  }
+  const mDoc=path.match(/^\/api\/admin\/documents\/([^/]+)$/);
+  if(mDoc){
+    const d=DEMO_DOCS.find(x=>x.id===decodeURIComponent(mDoc[1]));
+    if(!d) return mkRes(404,{error:'not found'});
+    if(method==='PUT'){ d.title=body.title??d.title; d.acl=body.acl??d.acl; return mkRes(200,{ok:true}); }
+    if(method==='DELETE'){ DEMO_DOCS.splice(DEMO_DOCS.indexOf(d),1); return mkRes(200,{ok:true}); }
+  }
+
+  return mkRes(404,{error:'not found: '+path});
+}
+
+</script>
+<script>
+/* =====================================================================
+   コア: 状態・ヘルパー・認証・レール(サイドバー)ルーティング・チャット画面
+   デザインは Frame 2 / Frame 20 のシェル(青背景+白シート)に準拠。
+   ===================================================================== */
+
+const SHEET=document.getElementById('sheet');
+let TOKEN=sessionStorage.getItem('krag_token')||null;
+let ME=null, TEMPLATES=[], AI=false, VIS=0, TOT=0, ORG_NAME='';
+let DEMO=false;          // バックエンド未検出ならtrue(内蔵デモデータで動く)
+let VIEW='chat';         // chat | manager | structure | analysis | admin
+let CHAT_MODE='ai';      // ai | dm
+
+const ICON={
+  check:'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  x:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#d1453b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  doc:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/></svg>',
+  arrow:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  quote:'<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h4v4H7zM13 7h4v4h-4z"/></svg>',
+};
+
+function esc(s){return (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function initial(name){return (name||'?').trim().charAt(0)}
+function authHeaders(extra){return Object.assign(TOKEN?{'Authorization':'Bearer '+TOKEN}:{}, extra||{})}
+const trunc=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s;
+const stripExt=s=>(s||'').replace(/(?:\.[A-Za-z0-9]{1,5}){1,3}$/,'');
+const el=(t,a)=>{const e=document.createElementNS('http://www.w3.org/2000/svg',t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+/* デモ/実バックエンドを吸収するfetch。DEMOならモックへ */
+async function apiFetch(url, opts){
+  if(DEMO) return demoApi(url, opts);
+  return fetch(url, opts);
+}
+
+function countUp(elm, to, duration){
+  if(!elm) return;
+  to=Number(to)||0; duration=duration||800;
+  const start=performance.now();
+  const step=now=>{
+    const p=Math.min(1,(now-start)/duration);
+    elm.textContent=Math.round(to*(1-Math.pow(1-p,3)));
+    if(p<1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function roleColor(groups){
+  const g=groups||[];
+  if(g.includes('g_exec'))return '#4a6cf5';
+  if(g.includes('g_sales'))return '#e8703a';
+  if(g.includes('g_hr'))return '#a24bd8';
+  if(g.includes('g_dev'))return '#22a06b';
+  return '#5b6270';
+}
+function dateLabel(iso){const d=new Date(iso);
+  return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`}
+function monthLabel(iso){const d=new Date(iso);return `${d.getFullYear()}年${d.getMonth()+1}月`}
+function fmtSize(b){ if(!b) return '—'; if(b>=1e9)return (b/1e9).toFixed(1)+' GB'; if(b>=1e6)return (b/1e6).toFixed(1)+' MB'; if(b>=1e3)return Math.round(b/1e3)+' KB'; return b+' B'; }
+
+/* トースト */
+let _toastTimer=null;
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){ t=document.createElement('div'); t.id='toast'; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+function resetPerUserState(){
+  BIZFLOW=null; bizLoaded=false; bizSelected=null; bizHover=null; BIZ_AGG=true;
+  ADMIN_INSIGHTS=null; adminInsightsLoaded=false;
+  DOCS=[]; MGR_TYPES=null; ALL_TYPES=[];
+  SESSIONS=[]; CURRENT_SESSION=null; CHAT_MODE='ai';
+}
+
+/* ---------------- 引用元プレビュー(原本モーダル) ---------------- */
+const TIER_DEF={
+  core:{id:0,label:'コア / 最重要',sub:'上段',desc:'請求書・見積書・契約書・案件情報。'},
+  deliverable:{id:1,label:'成果物',sub:'中段',desc:'作成したファイル。デザイン・ソース・納品物。'},
+  reference:{id:2,label:'参考 / 履歴',sub:'下段',desc:'やりとり・議事録・参考資料など。'},
+};
+const TIER_BY_ID=['core','deliverable','reference'];
+function tierOf(imp){ return TIER_DEF[imp] ? imp : 'reference'; }
+function tierNumOf(d){ return TIER_DEF[tierOf(d.importance)].id; }
+function dpImportanceLabel(imp){ return (TIER_DEF[tierOf(imp)]||TIER_DEF.reference).label; }
+
+function openDocPreview(docId){
+  docId=(docId||'').toString().trim();
+  if(!docId) return;
+  const modal=document.getElementById('docPreviewModal');
+  modal.innerHTML=`<div class="dp-overlay"></div>
+    <div class="dp-box" role="dialog" aria-modal="true" aria-label="資料プレビュー">
+      <div class="dp-head"><div><div class="dp-title">読み込み中…</div></div>
+        <button class="dp-close" aria-label="閉じる" type="button">${ICON.x}</button></div>
+      <div class="dp-body"><div class="dp-loading"><span class="loading"><i></i><i></i><i></i></span></div></div>
+    </div>`;
+  modal.classList.add('show');
+  modal.setAttribute('aria-hidden','false');
+  modal.querySelector('.dp-overlay').onclick=closeDocPreview;
+  modal.querySelector('.dp-close').onclick=closeDocPreview;
+  fetchDocPreview(docId);
+}
+async function fetchDocPreview(docId){
+  const modal=document.getElementById('docPreviewModal');
+  try{
+    const r=await apiFetch('/api/documents/'+encodeURIComponent(docId)+'/preview',{headers:authHeaders()});
+    if(r.status===401){ closeDocPreview(); toast('セッションが切れました'); return logout(); }
+    if(!modal.classList.contains('show')) return;
+    if(!r.ok){
+      const head=modal.querySelector('.dp-head');
+      if(head) head.querySelector('.dp-title').textContent='資料が見つかりません';
+      const body=modal.querySelector('.dp-body');
+      if(body) body.innerHTML='<div class="dp-error">この資料は表示できません（権限がないか、削除された可能性があります）。</div>';
+      return;
+    }
+    const d=await r.json();
+    if(!modal.classList.contains('show')) return;
+    modal.querySelector('.dp-head').innerHTML=`
+      <div><div class="dp-title">${esc(stripExt(d.title))}</div>
+        <div class="dp-meta">
+          <span class="mtag">${esc(d.doc_type||'一般')}</span>
+          <span class="mtag">${esc(dpImportanceLabel(d.importance))}</span>
+          <span class="mtag">${esc(dateLabel(d.updated_at))}</span>
+          <span class="mtag">${esc(d.source||'')}</span>
+        </div>
+      </div>
+      <button class="dp-close" aria-label="閉じる" type="button">${ICON.x}</button>`;
+    modal.querySelector('.dp-close').onclick=closeDocPreview;
+    modal.querySelector('.dp-body').innerHTML=`
+      ${d.summary?`<div class="dp-summary">${esc(d.summary)}</div>`:''}
+      <div class="dp-content">${esc(d.content||'（本文がありません）')}</div>`;
+  }catch(e){
+    if(!modal.classList.contains('show')) return;
+    const body=modal.querySelector('.dp-body');
+    if(body) body.innerHTML='<div class="dp-error">読み込みに失敗しました。</div>';
+  }
+}
+function closeDocPreview(){
+  const modal=document.getElementById('docPreviewModal');
+  if(!modal) return;
+  modal.classList.remove('show');
+  modal.setAttribute('aria-hidden','true');
+  modal.innerHTML='';
+}
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){
+    const modal=document.getElementById('docPreviewModal');
+    if(modal && modal.classList.contains('show')) closeDocPreview();
+  }
+});
+
+/* ---------------- レール(サイドバー)ルーティング ---------------- */
+function setRail(active){
+  document.querySelectorAll('.rail-item').forEach(b=>b.classList.toggle('active', b.dataset.view===active));
+}
+function bindRail(){
+  document.querySelectorAll('.rail-item').forEach(b=>{
+    b.onclick=()=>{
+      if(!ME){ toast('先にログインしてください'); return; }
+      routeTo(b.dataset.view);
+    };
+  });
+  document.getElementById('railAvatar').onclick=toggleUserMenu;
+}
+function routeTo(view){
+  if(view==='chat') return showChat();
+  if(view==='manager') return showManager();
+  if(view==='structure') return showStructure();
+  if(view==='analysis') return showAnalysis();
+  if(view==='admin') return showAdmin();
+}
+
+/* 下部アバター: ユーザーメニュー(ログアウトはここに集約) */
+function toggleUserMenu(){
+  let m=document.getElementById('userMenu');
+  if(m){ m.remove(); return; }
+  if(!ME) return;
+  m=document.createElement('div');
+  m.id='userMenu';
+  m.innerHTML=`
+    <div class="um-name">${esc(ME.name)}</div>
+    <div class="um-title">${esc(ME.title||'')}${ME.role==='admin'?' ・ 管理者':''}</div>
+    <button class="um-logout" id="umLogout">ログアウト</button>`;
+  document.body.appendChild(m);
+  document.getElementById('umLogout').onclick=()=>{ m.remove(); logout(); };
+  setTimeout(()=>{
+    const close=e=>{ if(!m.contains(e.target)){ m.remove(); document.removeEventListener('click',close);} };
+    document.addEventListener('click',close);
+  },0);
+}
+function renderRailAvatar(){
+  const av=document.getElementById('railAvatar');
+  if(ME){
+    av.innerHTML=`<span class="rav-initial">${esc(initial(ME.name))}</span>`;
+    av.title=ME.name+'（クリックでメニュー）';
+  }else{
+    av.innerHTML='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" style="width:27px;height:27px"><circle cx="12" cy="8.2" r="3.7"/><path d="M4.6 20.4a7.6 7.6 0 0 1 14.8 0z"/></svg>';
+    av.title='';
+  }
+  renderTopbar();
+}
+/* 上部バー右側: ログイン中はユーザー名(オンライン表示)、未ログイン時はデモ表示 */
+function renderTopbar(){
+  const el=document.getElementById('tbRight');
+  if(!el) return;
+  if(ME){
+    el.innerHTML=`<span class="tb-user"><span class="tb-dot"></span>${esc(ME.name)}${ME.role==='admin'?'（管理者）':''}</span>`;
+  }else{
+    el.innerHTML = DEMO ? '<span class="tb-badge">デモモード</span>' : '';
+  }
+}
+
+/* ---------------- 起動 ---------------- */
+async function detectBackend(){
+  try{
+    const ctl=new AbortController();
+    const t=setTimeout(()=>ctl.abort(),1500);
+    const r=await fetch('/api/demo-accounts',{signal:ctl.signal});
+    clearTimeout(t);
+    DEMO=!r.ok;
+  }catch(e){ DEMO=true; }
+}
+async function init(){
+  bindRail();
+  await detectBackend();
+  if(TOKEN){
+    try{
+      const r=await apiFetch('/api/me',{headers:authHeaders()});
+      if(r.ok){
+        const d=await r.json();
+        ME=d.user;TEMPLATES=d.templates;AI=d.ai_enabled;VIS=d.visible_docs;TOT=d.total_docs;ORG_NAME=d.org_name||'';
+        resetPerUserState();
+        renderRailAvatar();
+        return showChat();
+      }
+    }catch(e){}
+    TOKEN=null;sessionStorage.removeItem('krag_token');
+  }
+  showLogin();
+}
+
+/* ---------------- ログイン ---------------- */
+async function showLogin(){
+  ME=null; VIEW='login';
+  document.querySelector('.app').classList.add('auth'); // レールを隠して独立したログイン画面にする
+  setRail(null); renderRailAvatar();
+  SHEET.innerHTML=`
+  <div class="login">
+    <div class="login-left fu-s" style="--d:0s">
+      <div class="brand"><span class="bdot"></span><b>社内ナレッジ集約AI</b></div>
+      <div class="login-copy">
+        <h1 class="login-headline">見ていい人にだけ、<br><em>答える</em>AI。</h1>
+        <p class="login-lede">社内資料に、自然文で質問できます。</p>
+      </div>
+      ${DEMO?'<div class="demo-badge">デモモード（内蔵データで動作中）</div>':''}
+    </div>
+    <div class="login-right">
+      <div class="login-card fu-s" style="--d:.08s">
+        <h2>ログイン</h2>
+        <div class="field"><label>ログインID</label><input id="u" autocomplete="username" placeholder="例：kido"></div>
+        <div class="field"><label>パスワード</label><input id="p" type="password" autocomplete="current-password" placeholder="パスワード"></div>
+        <div class="lerr" id="lerr"></div>
+        <button class="lbtn" id="lbtn">ログイン ${ICON.arrow}</button>
+        <div class="demo-accts">
+          <div class="dh">デモ用アカウント（クリックでログイン）</div>
+          <div id="demoAccts"></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById('lbtn').onclick=login;
+  document.getElementById('p').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing&&e.keyCode!==229)login()});
+  document.getElementById('u').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing&&e.keyCode!==229)document.getElementById('p').focus()});
+  try{
+    const d=await (await apiFetch('/api/demo-accounts')).json();
+    document.getElementById('demoAccts').innerHTML=d.accounts.map(a=>`
+      <button class="da" data-u="${esc(a.username)}" data-p="${esc(a.password)}">
+        <span class="av" style="background:${roleColor(a.username==='kido'?['g_exec']:a.username==='ninomiya'?['g_sales']:['g_dev'])}">${esc(initial(a.name))}</span>
+        <span class="meta"><span class="nm">${esc(a.name)}</span><span class="ti">${esc(a.title)}</span></span>
+        <span class="go">${ICON.arrow}</span></button>`).join('');
+    document.querySelectorAll('.da').forEach(b=>b.onclick=()=>{
+      document.getElementById('u').value=b.dataset.u;document.getElementById('p').value=b.dataset.p;login();});
+  }catch(e){}
+}
+async function login(){
+  const u=document.getElementById('u').value.trim(),p=document.getElementById('p').value;
+  const err=document.getElementById('lerr'),btn=document.getElementById('lbtn');
+  err.textContent='';
+  if(!u||!p){err.textContent='ユーザー名とパスワードを入力してください';return;}
+  btn.disabled=true;
+  try{
+    const r=await apiFetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const d=await r.json();
+    if(!r.ok){err.textContent=d.error||'ログインに失敗しました';btn.disabled=false;return;}
+    TOKEN=d.token;sessionStorage.setItem('krag_token',TOKEN);
+    const me=await (await apiFetch('/api/me',{headers:authHeaders()})).json();
+    ME=me.user;TEMPLATES=me.templates;AI=me.ai_enabled;VIS=me.visible_docs;TOT=me.total_docs;ORG_NAME=me.org_name||'';
+    resetPerUserState();
+    renderRailAvatar();
+    showChat();
+  }catch(e){err.textContent='通信エラーが発生しました';btn.disabled=false;}
+}
+async function logout(){
+  try{await apiFetch('/api/logout',{method:'POST',headers:authHeaders()});}catch(e){}
+  TOKEN=null;sessionStorage.removeItem('krag_token');
+  showLogin();
+}
+
+/* =====================================================================
+   チャット画面: AIチャット(権限フィルタ付きQ&A) ⇄ DM・グループチャット
+   ===================================================================== */
+let SESSIONS=[];            // {id,title,html} AIチャットのセッション履歴
+let CURRENT_SESSION=null;
+let pendingFiles=[];
+
+function showChat(){
+  VIEW='chat'; document.querySelector('.app').classList.remove('auth'); setRail('chat');
+  SHEET.innerHTML=`
+    <aside class="nav" id="navAI">
+      <div class="seg">
+        <button class="on" data-seg="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-11.8 7.7L3 21l1.9-5.7A8.4 8.4 0 1 1 21 11.5z"/></svg>Chat</button>
+        <button data-seg="cowork"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v4M16 3v4M4 9h16M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>Cowork</button>
+        <button data-seg="code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/></svg>Code</button>
+      </div>
+      <div class="nav-scroll">
+        <a class="nav-link" id="newSession"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>新規セッション</a>
+        <a class="nav-link muted" id="lnkArtifact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 6a2 2 0 0 1 2-2h9l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>アーティファクト</a>
+        <a class="nav-link muted" id="lnkCustomize"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3l2.5 5 5.5.8-4 3.9.9 5.5L12 21l-4.9-2.8.9-5.5-4-3.9L9.5 8z"/></svg>カスタマイズ</a>
+        <div class="nav-sec"><span>最近の項目</span></div>
+        <div id="recentList"></div>
+      </div>
+    </aside>
+    <aside class="nav hidden" id="navDM">
+      <div class="nav-scroll" style="padding-top:10px">
+        <div class="nav-sec" style="padding-top:6px"><span>チャンネル</span><button class="plus" id="addCh">＋</button></div>
+        <div id="channelList"></div>
+        <div class="nav-sec"><span>グループ</span></div>
+        <div id="groupList"></div>
+        <div class="nav-sec"><span>ダイレクトメッセージ</span></div>
+        <div id="dmList"></div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="main-head" id="mainHead">
+        <div class="mode-toggle">
+          <button id="btnAI" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z"/><path d="M12 8v4l2.5 2.5"/></svg>AIチャット</button>
+          <button id="btnDM"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8l-4 3z"/><path d="M17 9h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2l0 0-3-2H10"/></svg>DM・グループチャット</button>
+        </div>
+        <div class="head-title" id="headTitle"></div>
+        <div class="head-actions" id="headActions"></div>
+      </div>
+      <div class="stream" id="aiStream">
+        <div class="feed-inner" id="feed"></div>
+      </div>
+      <div class="stream hidden" id="dmStream"><div class="msgs" id="dmMsgs"></div></div>
+      <div class="composer">
+        <div class="composer-inner">
+          <div class="attach-row hidden" id="attachRow"></div>
+          <div class="inputbox">
+            <div class="input-top">
+              <textarea id="ta" rows="1" placeholder="テキストを入力"></textarea>
+              <button class="send-btn" id="sendBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+            </div>
+            <div class="input-bar">
+              <span class="tool-pill" id="autoPill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2"/></svg>自動</span>
+              <button class="tool-ic" id="attachBtn" title="ファイルを追加"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+              <input type="file" id="fileInput" multiple class="hidden">
+              <button class="tool-ic" id="micBtn" title="音声入力（準備中）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg></button>
+              <div class="right" id="statusRight"><span>Opus 4.8</span><span>高</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>`;
+  bindChat();
+  renderChatIntro();
+  renderRecents();
+  renderChannels();
+  renderChatHeader();
+}
+
+function bindChat(){
+  document.getElementById('btnAI').onclick=()=>setChatMode('ai');
+  document.getElementById('btnDM').onclick=()=>setChatMode('dm');
+  document.getElementById('newSession').onclick=newSession;
+  document.getElementById('lnkArtifact').onclick=()=>toast('アーティファクトは後続フェーズで提供予定です');
+  document.getElementById('lnkCustomize').onclick=()=>toast('カスタマイズは後続フェーズで提供予定です');
+  document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{
+    if(b.dataset.seg!=='chat'){ toast('このデモではChatのみ利用できます'); return; }
+    document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===b));
+  });
+  const ta=document.getElementById('ta');
+  ta.addEventListener('input',()=>{taGrow();updateSendBtn();});
+  ta.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){e.preventDefault();onComposerSend();}
+  });
+  document.getElementById('sendBtn').onclick=onComposerSend;
+  document.getElementById('attachBtn').onclick=()=>document.getElementById('fileInput').click();
+  document.getElementById('fileInput').onchange=e=>onFilesPicked(e.target.files);
+  document.getElementById('micBtn').onclick=()=>toast('音声入力は準備中です');
+  const drop=document.querySelector('.composer');
+  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
+  drop.addEventListener('drop',e=>{ if(e.dataTransfer.files.length) onFilesPicked(e.dataTransfer.files); });
+}
+function taGrow(){ const ta=document.getElementById('ta'); ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,150)+'px'; }
+function updateSendBtn(){
+  const ta=document.getElementById('ta');
+  const has=ta.value.trim()||pendingFiles.length;
+  document.getElementById('sendBtn').classList.toggle('ready',!!has);
+}
+
+function setChatMode(m){
+  CHAT_MODE=m;
+  document.getElementById('btnAI').classList.toggle('on',m==='ai');
+  document.getElementById('btnDM').classList.toggle('on',m==='dm');
+  document.getElementById('navAI').classList.toggle('hidden',m!=='ai');
+  document.getElementById('navDM').classList.toggle('hidden',m==='ai');
+  document.getElementById('aiStream').classList.toggle('hidden',m!=='ai');
+  document.getElementById('dmStream').classList.toggle('hidden',m==='ai');
+  document.getElementById('mainHead').classList.toggle('dm',m==='dm');
+  document.getElementById('autoPill').classList.toggle('hidden',m!=='ai');
+  document.getElementById('statusRight').classList.toggle('hidden',m!=='ai');
+  document.getElementById('attachBtn').title = m==='ai'?'ナレッジDBに資料を追加':'ファイルを添付';
+  document.getElementById('ta').placeholder = m==='ai'?'テキストを入力（社内資料に質問）':dmPlaceholder();
+  renderChatHeader();
+  if(m==='dm') renderDMMsgs();
+  updateSendBtn();
+}
+function renderChatHeader(){
+  const ht=document.getElementById('headTitle');
+  const ha=document.getElementById('headActions');
+  if(CHAT_MODE==='ai'){
+    ht.innerHTML = CURRENT_SESSION&&CURRENT_SESSION.title
+      ? `<span>${esc(trunc(CURRENT_SESSION.title,30))}</span><span class="head-sub">${DEMO?'デモ':'接続中'} · 権限フィルタ有効</span>`
+      : `<span class="head-sub">社内資料に、あなたの権限の範囲で答えます</span>`;
+    ha.innerHTML='';
+  }else{
+    const i=dmTitle(dmCurrent);
+    const lead=i.hash?`<span class="hash">#</span>`:(i.dm?dmAvatarHTML(i.dm):'');
+    ht.innerHTML=`${lead}<span>${esc(i.name)}</span><span class="head-sub">${esc(i.sub||'')}</span>`;
+    ha.innerHTML='';
+  }
+}
+
+/* ---- AIチャット: セッション管理(最近の項目) ---- */
+function newSession(){
+  saveCurrentSession();
+  CURRENT_SESSION=null;
+  renderChatIntro();
+  renderRecents();
+  renderChatHeader();
+  setChatMode('ai');
+}
+function saveCurrentSession(){
+  const feed=document.getElementById('feed');
+  if(!feed) return;
+  if(CURRENT_SESSION && feed.querySelector('.msg')){
+    CURRENT_SESSION.html=feed.innerHTML;
+  }
+}
+function openSession(id){
+  saveCurrentSession();
+  const s=SESSIONS.find(x=>x.id===id);
+  if(!s) return;
+  CURRENT_SESSION=s;
+  document.getElementById('feed').innerHTML=s.html;
+  bindSrcClicks(document.getElementById('feed'));
+  renderRecents();
+  renderChatHeader();
+  const sc=document.getElementById('aiStream'); sc.scrollTop=sc.scrollHeight;
+}
+function ensureSession(firstQuery){
+  if(!CURRENT_SESSION){
+    CURRENT_SESSION={id:'s'+Date.now(), title:trunc(firstQuery,26), html:''};
+    SESSIONS.unshift(CURRENT_SESSION);
+    renderRecents();
+    renderChatHeader();
+  }
+}
+function renderRecents(){
+  const wrap=document.getElementById('recentList');
+  if(!wrap) return;
+  wrap.innerHTML = SESSIONS.length
+    ? SESSIONS.map(s=>`<div class="recent ${CURRENT_SESSION&&CURRENT_SESSION.id===s.id?'active':''} nodot" data-id="${s.id}"><span class="txt">${esc(s.title)}</span></div>`).join('')
+    : '<div class="nav-empty">質問するとここに履歴が残ります</div>';
+  wrap.querySelectorAll('.recent').forEach(r=>r.onclick=()=>openSession(r.dataset.id));
+}
+
+function renderChatIntro(){
+  const feed=document.getElementById('feed');
+  feed.innerHTML=`
+    <div class="intro fu-s" style="--d:.04s">
+      <h2>${esc(ME.name)}さんの権限で、質問できます。</h2>
+      <p>回答には引用元がつきます。権限のない資料は回答に一切現れません。</p>
+      <div class="tpl" id="tpl"></div>
+    </div>`;
+  document.getElementById('tpl').innerHTML=TEMPLATES.map((t,i)=>`<button data-i="${i}">${esc(t.label)}</button>`).join('');
+  document.querySelectorAll('.tpl button').forEach(b=>b.onclick=()=>ask(TEMPLATES[b.dataset.i].query));
+}
+
+/* ---- 回答カード共通 ---- */
+function srcHtmlFrom(sources){
+  if(!sources||!sources.length) return '';
+  return '<div class="src"><div class="h">'+ICON.quote+' 引用元</div>'+sources.map((s,i)=>
+    `<div class="item" data-doc-id="${esc(s.doc_id||'')}"><span class="di">${ICON.doc}</span><span class="tt"><span class="t1">[${i+1}] ${esc(stripExt(s.title))}</span><span class="t2">${esc(s.source)}</span></span><span class="acl">閲覧権限: ${esc(s.acl_label)}</span></div>`).join('')+'</div>';
+}
+function bindSrcClicks(container){
+  if(!container) return;
+  container.querySelectorAll('.src .item').forEach(it=>{
+    const id=it.dataset.docId;
+    if(!id) return;
+    it.onclick=()=>openDocPreview(id);
+  });
+}
+
+function onComposerSend(){
+  if(CHAT_MODE==='ai'){
+    const ta=document.getElementById('ta');
+    const q=ta.value.trim();
+    if(!q) return;
+    ta.value=''; taGrow(); updateSendBtn();
+    ask(q);
+  }else{
+    dmSend();
+  }
+}
+
+/* ---- 質問(実バックエンド:SSE / デモ:内蔵QAを擬似ストリーミング) ---- */
+async function ask(text){
+  const q=(text||'').trim();
+  if(!q) return;
+  ensureSession(q);
+  const feed=document.getElementById('feed');
+  const intro=feed.querySelector('.intro'); if(intro) intro.remove();
+  feed.insertAdjacentHTML('beforeend',`<div class="msg u"><div class="bubble">${esc(q)}</div></div>`);
+  const loadId='l'+Date.now();
+  feed.insertAdjacentHTML('beforeend',`<div class="msg a" id="${loadId}"><div class="acard"><div class="ahead"><span class="ai">${ICON.spark}</span><span class="lbl">回答を生成中</span></div><div class="body"><span class="loading"><i></i><i></i><i></i></span></div></div></div>`);
+  const sc=document.getElementById('aiStream'); sc.scrollTop=sc.scrollHeight;
+  const send=document.getElementById('sendBtn'); send.classList.add('busy');
+
+  const finish=()=>{ send.classList.remove('busy'); saveCurrentSession();
+    const sc2=document.getElementById('aiStream'); if(sc2) sc2.scrollTop=sc2.scrollHeight; };
+
+  if(DEMO){
+    // デモ: 内蔵QAで判定し、1文字ずつ流す
+    await new Promise(r=>setTimeout(r,650));
+    const res=demoAsk(q, DEMO_USERS.find(u=>u.id===ME.id));
+    const elCard=document.getElementById(loadId);
+    if(res.blocked){
+      elCard.outerHTML=`<div class="msg a">${blockedCardHtml(res)}</div>`;
+      finish(); return;
+    }
+    let shown='';
+    const srcHtml=srcHtmlFrom(res.sources);
+    const render=(done)=>{
+      const c=document.getElementById(loadId);
+      if(!c) return;
+      c.innerHTML=`<div class="acard"><div class="ahead"><span class="ai">${ICON.spark}</span><span class="lbl">回答</span>${done&&!res.gap?`<span class="pill ok">${ICON.check} 権限OK</span>`:''}</div>`+
+        `<div class="body">${esc(shown)}${done?'':'<span class="cursor-blink">▍</span>'}</div>${done?srcHtml:''}</div>`;
+      if(done) bindSrcClicks(c);
+      const s2=document.getElementById('aiStream'); if(s2) s2.scrollTop=s2.scrollHeight;
+    };
+    for(let i=0;i<res.answer.length;i+=3){
+      shown=res.answer.slice(0,i+3);
+      render(false);
+      await new Promise(r=>setTimeout(r,18));
+    }
+    shown=res.answer; render(true);
+    finish(); return;
+  }
+
+  /* 実バックエンド: SSEストリーミング(旧実装を踏襲) */
+  let streamedText='', metaData=null, doneData=null, sawError=false, streamStarted=false;
+  const renderStreaming=()=>{
+    const elc=document.getElementById(loadId);
+    if(!elc) return;
+    const srcHtml=(metaData&&!metaData.blocked)?srcHtmlFrom(metaData.sources):'';
+    elc.innerHTML=`<div class="acard"><div class="ahead"><span class="ai">${ICON.spark}</span><span class="lbl">回答</span></div>`
+      +`<div class="body">${esc(streamedText)}<span class="cursor-blink">▍</span></div>${srcHtml}</div>`;
+    bindSrcClicks(elc);
+    const sc2=document.getElementById('aiStream'); if(sc2) sc2.scrollTop=sc2.scrollHeight;
+  };
+  try{
+    const STREAM_BASE=location.hostname.endsWith('.web.app')?'https://knowledge-ai-api-135815080966.asia-northeast1.run.app':'';
+    const r=await fetch(STREAM_BASE+'/api/ask/stream',{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({query:q})});
+    if(r.status===401){toast('セッションが切れました');return logout();}
+    if(!r.ok||!r.body) throw new Error('stream-failed');
+    const reader=r.body.getReader();
+    const decoder=new TextDecoder();
+    let buf='';
+    while(true){
+      const {value,done}=await reader.read();
+      if(done) break;
+      buf+=decoder.decode(value,{stream:true});
+      let idx;
+      while((idx=buf.indexOf('\n\n'))>=0){
+        const raw=buf.slice(0,idx); buf=buf.slice(idx+2);
+        let ev='message',data='';
+        raw.split('\n').forEach(line=>{
+          if(line.startsWith('event:')) ev=line.slice(6).trim();
+          else if(line.startsWith('data:')) data+=line.slice(5).trim();
+        });
+        if(!data) continue;
+        let parsed; try{parsed=JSON.parse(data);}catch(e){continue;}
+        if(ev==='meta'){ metaData=parsed; if(!metaData.blocked){streamStarted=true;renderStreaming();} }
+        else if(ev==='delta'){ streamedText+=parsed.text||''; streamStarted=true; renderStreaming(); }
+        else if(ev==='done'){ doneData=parsed; }
+        else if(ev==='error'){ sawError=true; }
+      }
+    }
+    const elc=document.getElementById(loadId);
+    if(sawError||!doneData){
+      if(elc) elc.querySelector('.body').textContent='エラーが発生しました';
+    }else if(doneData.blocked){
+      const u=(metaData&&metaData.user)||{name:ME.name,title:ME.title||''};
+      const vis=metaData?metaData.visible_docs:VIS, tot=metaData?metaData.total_docs:TOT;
+      if(elc) elc.outerHTML=`<div class="msg a">${blockedCardHtml({answer:doneData.answer,user:u,visible_docs:vis,total_docs:tot})}</div>`;
+    }else{
+      const srcHtml=srcHtmlFrom(doneData.sources);
+      const html=`<div class="acard"><div class="ahead"><span class="ai">${ICON.spark}</span><span class="lbl">回答</span><span class="pill ok">${ICON.check} 権限OK</span></div><div class="body">${esc(doneData.answer)}</div>${srcHtml}</div>`;
+      if(elc){ elc.outerHTML=`<div class="msg a" id="${loadId}">${html}</div>`; bindSrcClicks(document.getElementById(loadId)); }
+    }
+  }catch(e){
+    const elc=document.getElementById(loadId);
+    if(elc){
+      if(streamStarted) elc.querySelector('.body').textContent='エラーが発生しました';
+      else elc.outerHTML=`<div class="msg a"><div class="acard"><div class="ahead"><span class="ai">${ICON.spark}</span><span class="lbl">回答</span></div><div class="body">エラーが発生しました</div></div></div>`;
+    }
+  }
+  finish();
+}
+function blockedCardHtml(res){
+  const u=res.user||{name:ME.name,title:ME.title||''};
+  return `<div class="acard blocked"><div class="blockwrap">
+    <div class="bigicon">${ICON.lock}</div>
+    <h4>アクセスが遮断されました</h4>
+    <p>${esc(res.answer)||'あなたの権限では、この質問に該当する社内資料を参照できません。'}</p>
+    <div class="meta"><span class="bmeta">閲覧者：<b>${esc(u.name)}（${esc(u.title)}）</b></span><span class="bmeta">参照可能な資料：<b>${res.visible_docs} / ${res.total_docs} 件</b></span></div>
+  </div></div>`;
+}
+
+/* ---- 添付(+)ボタン: AIモード=ナレッジDBへ取込 / DMモード=添付 ---- */
+async function onFilesPicked(files){
+  if(!files||!files.length) return;
+  if(CHAT_MODE==='ai'){
+    // ナレッジDBへの取込(/ingest)
+    toast('ナレッジDBへ取り込み中…');
+    for(const f of files){
+      const fd=new FormData();
+      fd.append('path','web-upload/'+ME.name+'/'+Date.now()+'-'+f.name);
+      fd.append('file',f,f.name);
+      try{ await apiFetch('/ingest',{method:'POST',headers:authHeaders(),body:fd}); }catch(e){}
+    }
+    DOCS=[]; MGR_TYPES=null; ALL_TYPES=[]; // マネージャーのキャッシュを無効化
+    toast(files.length+'件をナレッジDBに追加しました');
+  }else{
+    for(const f of files){
+      const isImg=f.type.startsWith('image/');
+      pendingFiles.push({name:f.name,size:humanSize(f.size),
+        kind:(f.name.split('.').pop()||'FILE').toUpperCase().slice(0,4),
+        img:isImg,url:URL.createObjectURL(f)});
+    }
+    renderAttachRow(); updateSendBtn();
+  }
+  document.getElementById('fileInput').value='';
+}
+function humanSize(b){
+  if(b<1024) return b+' B';
+  if(b<1024*1024) return (b/1024).toFixed(0)+' KB';
+  return (b/1024/1024).toFixed(1)+' MB';
+}
+function renderAttachRow(){
+  const row=document.getElementById('attachRow');
+  row.classList.toggle('hidden',pendingFiles.length===0);
+  row.innerHTML=pendingFiles.map((f,i)=>
+    `<div class="attach-chip"><span>${f.img?'🖼':'📄'}</span>${esc(f.name)} <span class="asize">${f.size}</span><button class="x" data-i="${i}">✕</button></div>`).join('');
+  row.querySelectorAll('.x').forEach(b=>b.onclick=()=>{pendingFiles.splice(Number(b.dataset.i),1);renderAttachRow();updateSendBtn();});
+}
+
+/* =====================================================================
+   DM・グループチャット(クライアント内デモ: Discord/Teams風)
+   ===================================================================== */
+const DM_PEOPLE={
+  u_kido:{name:'木戸 隆正',initials:'木',color:'#4a6cf5',on:true},
+  u_fukuda:{name:'福田 晟樹',initials:'福',color:'#22a06b',on:true},
+  u_matsuura:{name:'松浦 正醐',initials:'松',color:'#0a9ea4',on:true},
+  u_ninomiya:{name:'二宮 石太郎',initials:'二',color:'#e8703a',on:false},
+  bot:{name:'ナレッジBot',initials:'AI',color:'#5b6270',on:true},
+};
+const DM_CHANNELS=[
+  {id:'ch-general',name:'全体連絡',badge:0},
+  {id:'ch-dev',name:'開発',badge:2},
+  {id:'ch-sales',name:'営業',badge:0},
+];
+const DM_GROUPS=[{id:'grp-mvp',name:'MVP開発チーム',avatars:['u_kido','u_fukuda','u_matsuura']}];
+let dmCurrent='ch-general';
+const DM_CONV={
+  'ch-general':[
+    {u:'u_ninomiya',t:'09:12',text:'おはようございます。今日のMVPレビュー、15時からで大丈夫ですか？'},
+    {u:'u_matsuura',t:'09:15',text:'大丈夫です！権限フィルタ（F-05）のデモも用意しておきます。'},
+    {u:'u_kido',t:'09:18',text:'要件定義書の最新版を上げておきます。'},
+    {u:'u_kido',t:'09:18',file:{name:'要件定義書_社内ナレッジAI_v0.2.docx',size:'38 KB',kind:'DOC'}},
+  ],
+  'ch-dev':[
+    {u:'u_matsuura',t:'昨日 18:40',text:'差分同期（F-04）のプロトタイプできました。起動時に追加/更新/削除を反映します。'},
+    {u:'u_fukuda',t:'昨日 18:52',text:'早い！ACLの鮮度はどのくらいで追従します？'},
+    {u:'u_matsuura',t:'昨日 18:55',text:'今は定期30秒ポーリング。即時反映はWebhook対応で詰めます。'},
+    {u:'bot',t:'昨日 18:56',text:'補足：Google Workspace (Drive) のプッシュ通知チャネルを使うと、変更検知の遅延を数秒に短縮できます。出典: API設計メモ.md'},
+  ],
+  'ch-sales':[
+    {u:'u_ninomiya',t:'10:02',text:'ケアとーカーの提案書ドラフトです。フィードバックください。'},
+    {u:'u_ninomiya',t:'10:02',file:{name:'提案書_ケアとーカー.pptx',size:'56 KB',kind:'PPT'}},
+  ],
+  'grp-mvp':[
+    {u:'u_kido',t:'昨日 21:10',text:'【MVP開発チーム】今週の残タスクをここにまとめます。'},
+    {u:'u_matsuura',t:'昨日 21:12',text:'・F-04 差分同期（松浦）\n・F-05 権限フィルタ（福田）\n・DM/グループUI（レビュー待ち）'},
+  ],
+};
+function dmDmList(){
+  return Object.keys(DM_PEOPLE).filter(id=>id!=='bot'&&id!==ME.id).map(id=>({id:'dm-'+id,u:id,badge:0}));
+}
+function dmConvOf(id){
+  if(!DM_CONV[id]) DM_CONV[id]=[];
+  return DM_CONV[id];
+}
+function dmAvatarHTML(uid){
+  const p=DM_PEOPLE[uid]||{name:'?',initials:'?',color:'#5b6270'};
+  return `<div class="avatar" style="background:${p.color}">${p.initials}<span class="pres ${p.on?'on':''}"></span></div>`;
+}
+function dmTitle(id){
+  const c=DM_CHANNELS.find(x=>x.id===id); if(c) return {hash:true,name:c.name,sub:'チャンネル'};
+  const g=DM_GROUPS.find(x=>x.id===id); if(g) return {hash:false,name:g.name,sub:g.avatars.length+'名のグループ'};
+  if(id.startsWith('dm-')){const u=id.slice(3);const p=DM_PEOPLE[u];
+    return {hash:false,name:p?p.name:u,sub:p&&p.on?'オンライン':'オフライン',dm:u};}
+  return {name:''};
+}
+function dmPlaceholder(){
+  const i=dmTitle(dmCurrent);
+  return (i.hash?'#'+i.name:i.name)+' へメッセージ';
+}
+function renderChannels(){
+  const chWrap=document.getElementById('channelList');
+  if(!chWrap) return;
+  chWrap.innerHTML=DM_CHANNELS.map(c=>
+    `<div class="ch ${c.id===dmCurrent?'active':''}" data-id="${c.id}"><span class="hash">#</span><span class="txt">${esc(c.name)}</span>${c.badge?`<span class="badge">${c.badge}</span>`:''}</div>`).join('');
+  document.getElementById('groupList').innerHTML=DM_GROUPS.map(g=>{
+    const stack=g.avatars.slice(0,3).map(a=>`<span class="gstack" style="background:${DM_PEOPLE[a].color}">${DM_PEOPLE[a].initials}</span>`).join('');
+    return `<div class="ch ${g.id===dmCurrent?'active':''}" data-id="${g.id}"><span class="gstack-wrap">${stack}</span><span class="txt">${esc(g.name)}</span></div>`;}).join('');
+  document.getElementById('dmList').innerHTML=dmDmList().map(d=>
+    `<div class="ch ${d.id===dmCurrent?'active':''}" data-id="${d.id}">${dmAvatarHTML(d.u)}<span class="txt">${esc(DM_PEOPLE[d.u].name)}</span></div>`).join('');
+  document.querySelectorAll('#navDM .ch').forEach(c=>c.onclick=()=>openDMChannel(c.dataset.id));
+  const add=document.getElementById('addCh');
+  if(add) add.onclick=()=>{
+    const name=prompt('チャンネル名を入力');
+    if(!name) return;
+    const id='ch-'+Date.now();
+    DM_CHANNELS.push({id,name,badge:0});
+    openDMChannel(id);
+  };
+}
+function openDMChannel(id){
+  dmCurrent=id;
+  const c=DM_CHANNELS.find(x=>x.id===id); if(c) c.badge=0;
+  renderChannels(); renderChatHeader(); renderDMMsgs();
+  document.getElementById('ta').placeholder=dmPlaceholder();
+  document.getElementById('ta').focus();
+}
+function dmFileColor(kind){
+  return {DOC:'#2b7bd6',DOCX:'#2b7bd6',PPT:'#d1622b',PPTX:'#d1622b',PNG:'#22a06b',JPG:'#22a06b',PY:'#3b71c4',PDF:'#d1453b',MD:'#5b6270',XLSX:'#1f9d55'}[kind]||'#6b7280';
+}
+function dmFileCard(f){
+  if(f.img&&f.url) return `<img class="img-att" src="${f.url}" alt="${esc(f.name)}" data-url="${f.url}"/>`;
+  const dl=f.url?`<a class="file-dl" href="${f.url}" download="${esc(f.name)}" title="ダウンロード">⭳</a>`:`<button class="file-dl" title="ダウンロード">⭳</button>`;
+  return `<div class="file-card"><div class="file-ic" style="background:${dmFileColor(f.kind)}">${esc(f.kind)}</div>
+    <div class="file-meta"><div class="file-name">${esc(f.name)}</div><div class="file-size">${esc(f.size)}</div></div>${dl}</div>`;
+}
+function dmMsgHTML(m){
+  const p=DM_PEOPLE[m.u]||{name:m.u,initials:'?',color:'#5b6270'};
+  const body=(m.text?`<div class="msg-text">${esc(m.text)}</div>`:'')+(m.file?dmFileCard(m.file):'');
+  return `<div class="msg-dm ${m.u===ME.id?'me':''}">${dmAvatarHTML(m.u)}<div class="msg-body">
+    <div class="msg-head"><span class="msg-name">${esc(p.name)}</span><span class="msg-time">${esc(m.t)}</span></div>${body}</div></div>`;
+}
+function renderDMMsgs(){
+  const wrap=document.getElementById('dmMsgs');
+  if(!wrap) return;
+  const list=dmConvOf(dmCurrent);
+  const today=new Date();
+  wrap.innerHTML=`<div class="day-div">${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日</div>`+
+    (list.length?list.map(dmMsgHTML).join(''):'<div class="dm-empty">まだメッセージがありません。最初のメッセージを送ってみましょう。</div>');
+  wrap.querySelectorAll('.img-att').forEach(img=>img.onclick=()=>{
+    const lb=document.getElementById('lightbox');
+    document.getElementById('lightImg').src=img.dataset.url;
+    lb.classList.add('show');
+  });
+  const s=document.getElementById('dmStream');
+  requestAnimationFrame(()=>{s.scrollTop=s.scrollHeight;});
+}
+function dmSend(){
+  const ta=document.getElementById('ta');
+  const text=ta.value.trim();
+  if(!text&&!pendingFiles.length) return;
+  const now=new Date();
+  const t=`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const conv=dmConvOf(dmCurrent);
+  if(text) conv.push({u:ME.id,t,text});
+  for(const f of pendingFiles) conv.push({u:ME.id,t,file:f});
+  pendingFiles=[]; renderAttachRow();
+  ta.value=''; taGrow(); updateSendBtn(); renderDMMsgs();
+  // 相手からの自動返信(デモ)
+  let replier='u_kido';
+  if(dmCurrent.startsWith('dm-')) replier=dmCurrent.slice(3);
+  else { const others=Object.keys(DM_PEOPLE).filter(id=>id!=='bot'&&id!==ME.id); replier=others[Math.floor(Math.random()*others.length)]; }
+  const lines=['確認しました！','了解です👍','ありがとうございます、あとで見ます。','いいですね、進めましょう。'];
+  setTimeout(()=>{
+    const n2=new Date();
+    dmConvOf(dmCurrent).push({u:replier,t:`${n2.getHours()}:${String(n2.getMinutes()).padStart(2,'0')}`,text:lines[Math.floor(Math.random()*lines.length)]});
+    if(VIEW==='chat'&&CHAT_MODE==='dm') renderDMMsgs();
+  },900+Math.random()*700);
+}
+
+/* lightbox close */
+document.addEventListener('click',e=>{
+  const lb=document.getElementById('lightbox');
+  if(lb&&lb.classList.contains('show')&&e.target===lb) lb.classList.remove('show');
+});
+
+</script>
+<script>
+/* =====================================================================
+   マネージャー(3Dケーキ/つながりグラフ)・業務構造(AI業務フロー)・分析
+   — 旧index.htmlの描画エンジンを移植(Frame 2/20シェル内に描画する)。
+   ===================================================================== */
+
+/* ---------------- マネージャー(ナレッジの見取り図) ---------------- */
+let DOCS=[];
+let MGR_AGG=false;
+let MGR_TIERS=new Set(['core','deliverable','reference']);
+let ALL_TYPES=[];
+let MGR_TYPES=null;
+const TYPE_PALETTE=['#4a6cf5','#e8703a','#f2b01e','#22a06b','#0a9ea4','#a24bd8','#e5484d','#ec4899','#5b8def','#8a90a0'];
+const TYPE_COLOR_CACHE={};
+function typeColor(t){
+  if(!TYPE_COLOR_CACHE[t]){
+    const keys=Object.keys(TYPE_COLOR_CACHE);
+    TYPE_COLOR_CACHE[t]=TYPE_PALETTE[keys.length % TYPE_PALETTE.length];
+  }
+  return TYPE_COLOR_CACHE[t];
+}
+
+async function loadDocs(){
+  const r=await apiFetch('/documents',{headers:authHeaders()});
+  DOCS = r.ok ? await r.json() : [];
+  DOCS.sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at));
+  const types=new Set(DOCS.map(d=>d.doc_type||'一般'));
+  types.forEach(t=>{ if(!ALL_TYPES.includes(t)) ALL_TYPES.push(t); });
+  if(MGR_TYPES===null) MGR_TYPES=new Set(ALL_TYPES);
+  else types.forEach(t=>MGR_TYPES.add(t));
+}
+function visibleDocs(){
+  return DOCS.filter(d=>MGR_TIERS.has(tierOf(d.importance)) && MGR_TYPES.has(d.doc_type||'一般'));
+}
+
+/* === data cake 3D投影エンジン === */
+const APEX={x:300,y:650};
+const RHO0=100, RHO1=520;
+const THETA0=0, THETA1=90;
+const SX=1.10, DEPTH_X=0, DEPTH_Y=0.50;
+const SLAB_T=66;
+const LAYER_H=Math.ceil(RHO1*DEPTH_Y+SLAB_T)+24;
+const LAYER_SCALE=[1.0,0.80,0.62];
+const layerFactor=pos=>0.72+0.28*LAYER_SCALE[pos];
+let azimuth=0;
+const AZ_MIN=-1.5, AZ_MAX=1.5;
+function proj(rho, thetaDeg, pos){
+  const ca=Math.cos(azimuth), sa=Math.sin(azimuth);
+  const r=rho*LAYER_SCALE[pos];
+  const a=thetaDeg*Math.PI/180;
+  const fx=r*Math.sin(a), fy=r*Math.cos(a);
+  const gx=fx*ca-fy*sa, gy=fx*sa+fy*ca;
+  const br=RHO1*LAYER_SCALE[pos], ba=Math.PI/4;
+  const bfx=br*Math.sin(ba), bfy=br*Math.cos(ba);
+  const bgx=bfx*ca-bfy*sa, bgy=bfx*sa+bfy*ca;
+  const offX=-(bgx*SX+bgy*DEPTH_X);
+  const x=APEX.x+gx*SX+gy*DEPTH_X+offX;
+  const y=APEX.y-gy*DEPTH_Y-pos*LAYER_H;
+  return [x,y];
+}
+function sampleArc(rho,t0,t1,pos,n){const out=[];for(let i=0;i<=n;i++)out.push(proj(rho,t0+(t1-t0)*i/n,pos));return out;}
+const ptsToPath=(pts,close)=>'M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L')+(close?' Z':'');
+
+let NODES={};
+const nodeR=nd=>13*layerFactor(nd.pos);
+
+function computeGraph(){
+  const docs=visibleDocs();
+  const times=docs.map(d=>+new Date(d.updated_at));
+  const tMax=times.length?Math.max(...times):0, tMin=times.length?Math.min(...times):0, tRange=(tMax-tMin)||1;
+  NODES={};
+  const lo=THETA0+8, hi=THETA1-8;
+  [0,1,2].forEach(tier=>{
+    const fs=docs.filter(d=>tierNumOf(d)===tier);
+    const m=fs.length;
+    fs.forEach((d,k)=>{
+      const theta = m>1 ? lo+(k/(m-1))*(hi-lo) : (lo+hi)/2;
+      const pos=2-tier;
+      const age=(tMax-(+new Date(d.updated_at)))/tRange;
+      const rho=RHO0+age*(RHO1-RHO0)+(k%2?7:-7);
+      const [x,y]=proj(rho,theta,pos);
+      NODES[d.id]={doc:d, tier, pos, theta, rho, x, y};
+    });
+  });
+}
+
+let VB={x:0,y:0,s:900};
+function buildGraph(){
+  const svgEl=document.getElementById('cake');
+  if(!svgEl) return;
+  svgEl.innerHTML='';
+  const g=el('g',{}); svgEl.appendChild(g);
+  const slabTopFill=['#ffffff','#fbfcfe','#f6f9fc'];
+  const slabSideFill=['#dde4ec','#dde4ec','#dde4ec'];
+  for(let pos=0;pos<3;pos++){
+    const far=sampleArc(RHO1,THETA0,THETA1,pos,30);
+    const near=sampleArc(RHO0,THETA1,THETA0,pos,16);
+    const top=far.concat(near);
+    const frontLine=[proj(RHO1,THETA1,pos)].concat(sampleArc(RHO0,THETA1,THETA0,pos,16)).concat([proj(RHO1,THETA0,pos)]);
+    const frontDown=frontLine.map(p=>[p[0],p[1]+SLAB_T]).reverse();
+    const gs=el('g',{});
+    gs.appendChild(el('path',{d:ptsToPath(frontLine.concat(frontDown),true), fill:slabSideFill[pos], stroke:'#c3ccd8','stroke-width':'1.4','stroke-linejoin':'round'}));
+    gs.appendChild(el('path',{d:ptsToPath(top,true), fill:slabTopFill[pos], stroke:'#c3ccd8','stroke-width':'1.4','stroke-linejoin':'round'}));
+    g.appendChild(gs);
+    const [lx,ly]=proj(RHO1,THETA0,pos);
+    const t=TIER_DEF[TIER_BY_ID[2-pos]];
+    const t1=el('text',{x:lx-14,y:ly-2,'text-anchor':'end','font-size':'16','font-weight':'700',fill:'#2a3340'}); t1.textContent=t.label;
+    const t2=el('text',{x:lx-14,y:ly+15,'text-anchor':'end','font-size':'11','font-weight':'500',fill:'#9aa4b1'}); t2.textContent=t.sub;
+    g.appendChild(t1); g.appendChild(t2);
+  }
+  const [ax,ay]=proj(0,0,0);
+  const [ox,oy]=proj(RHO1,45,0);
+  const an1=el('text',{x:ax+8,y:ay+SLAB_T+24,'text-anchor':'start','font-size':'12.5','font-weight':'500',fill:'#b2bac6'}); an1.textContent='新しい（中心）';
+  const an2=el('text',{x:ox+10,y:oy-8,'text-anchor':'start','font-size':'12.5','font-weight':'500',fill:'#b2bac6'}); an2.textContent='古い（外周）';
+  g.appendChild(an1); g.appendChild(an2);
+
+  if(MGR_AGG){
+    buildClusters(g);
+    g.appendChild(el('g',{id:'cakeFx'}));
+  } else {
+    const gN=el('g',{id:'cakeNodes'});
+    Object.values(NODES).sort((m,n)=>(m.pos-n.pos)||(n.rho-m.rho)).forEach(nd=>{
+      const col=typeColor(nd.doc.doc_type||'一般');
+      const c=el('circle',{cx:nd.x,cy:nd.y,r:nodeR(nd),fill:col,stroke:'#ffffff','stroke-width':'2.4',tabindex:'0',role:'button'});
+      c.style.cursor='pointer';
+      c.dataset.id=nd.doc.id;
+      c.setAttribute('aria-label',`${nd.doc.title}｜${nd.doc.doc_type||'一般'}｜${TIER_DEF[tierOf(nd.doc.importance)].label}`);
+      const ttl=el('title',{}); ttl.textContent=`${nd.doc.title} — ${nd.doc.doc_type||'一般'} / ${TIER_DEF[tierOf(nd.doc.importance)].label}`; c.appendChild(ttl);
+      const enter=()=>{ if(!cakeSelected){ cakeHover=nd.doc.id; cakeRender(); } };
+      const leave=()=>{ if(!cakeSelected){ cakeHover=null; cakeRender(); } hideTip(); };
+      c.addEventListener('mouseenter', ev=>{ enter(); showTipEvent(ev,nd); });
+      c.addEventListener('mousemove', ev=>moveTip(ev));
+      c.addEventListener('mouseleave', leave);
+      c.addEventListener('focus', ()=>{ enter(); showTipNode(nd); });
+      c.addEventListener('blur', leave);
+      const toggle=()=>{ cakeSelected = cakeSelected===nd.doc.id?null:nd.doc.id; cakeRender(); };
+      c.addEventListener('click', ev=>{ ev.stopPropagation(); toggle(); });
+      c.addEventListener('keydown', ev=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); toggle(); } });
+      gN.appendChild(c);
+    });
+    g.appendChild(gN);
+    g.appendChild(el('g',{id:'cakeFx'}));
+  }
+  fitViewBox();
+}
+function fitViewBox(){
+  const svgEl=document.getElementById('cake');
+  const bb=svgEl.getBBox(); const pad=30;
+  let x=bb.x-pad,y=bb.y-pad,w=bb.width+2*pad,h=bb.height+2*pad;
+  const s=Math.max(w,h);
+  x-=(s-w)/2; y-=(s-h)/2;
+  svgEl.setAttribute('viewBox', `${x.toFixed(1)} ${y.toFixed(1)} ${s.toFixed(1)} ${s.toFixed(1)}`);
+  VB={x,y,s};
+}
+function buildClusters(g){
+  const groups={};
+  Object.values(NODES).forEach(nd=>{
+    const key=nd.tier+'|'+(nd.doc.doc_type||'一般');
+    (groups[key]=groups[key]||{tier:nd.tier,kind:nd.doc.doc_type||'一般',nodes:[]}).nodes.push(nd);
+  });
+  const byTier={0:[],1:[],2:[]};
+  Object.values(groups).forEach(grp=>byTier[grp.tier].push(grp));
+  const gC=el('g',{});
+  [0,1,2].forEach(tier=>{
+    const arr=byTier[tier];
+    const m=arr.length, lo=THETA0+12, hi=THETA1-12, pos=2-tier;
+    arr.forEach((grp,i)=>{
+      const theta=m>1?lo+(i/(m-1))*(hi-lo):(lo+hi)/2;
+      const rho=grp.nodes.reduce((s,n)=>s+n.rho,0)/grp.nodes.length;
+      const [x,y]=proj(rho,theta,pos);
+      const cnt=grp.nodes.length;
+      const r=Math.max(13,Math.min(46,10+Math.sqrt(cnt)*7))*layerFactor(pos);
+      const c=el('circle',{cx:x,cy:y,r:r,fill:typeColor(grp.kind),stroke:'#fff','stroke-width':'2.5'});
+      c.style.cursor='pointer';
+      c.addEventListener('mouseenter',ev=>tipCluster(ev,grp,cnt));
+      c.addEventListener('mousemove',ev=>moveTip(ev));
+      c.addEventListener('mouseleave',hideTip);
+      gC.appendChild(c);
+      const t=el('text',{x:x,y:y,'text-anchor':'middle','dominant-baseline':'central',fill:'#fff','font-weight':'700'});
+      t.setAttribute('font-size', cnt>=100?13:15); t.textContent=cnt;
+      gC.appendChild(t);
+    });
+  });
+  g.appendChild(gC);
+}
+function tipCluster(ev,grp,cnt){
+  document.getElementById('cakeTip').innerHTML=`<b>${esc(grp.kind)} × ${esc(TIER_DEF[TIER_BY_ID[grp.tier]].label)}</b><span>${cnt}件</span>`;
+  document.getElementById('cakeTip').classList.add('show'); moveTip(ev);
+}
+
+let cakeSelected=null, cakeHover=null, _lastCakeSel=null;
+function cakeRender(){
+  if(cakeSelected && !NODES[cakeSelected]) cakeSelected=null;
+  if(cakeHover && !NODES[cakeHover]) cakeHover=null;
+  const active=cakeSelected||cakeHover;
+  document.querySelectorAll('#cakeNodes circle').forEach(c=>{
+    const nd=NODES[c.dataset.id]; if(!nd) return;
+    const baseR=nodeR(nd);
+    if(active){
+      if(String(c.dataset.id)===String(active)){ c.setAttribute('r',baseR+4); c.setAttribute('fill-opacity',1); c.setAttribute('stroke-width','3'); }
+      else { c.setAttribute('r',baseR); c.setAttribute('fill-opacity',0.15); c.setAttribute('stroke-width','2.4'); }
+    } else { c.setAttribute('r',baseR); c.setAttribute('fill-opacity',1); c.setAttribute('stroke-width','2.4'); }
+  });
+  const fx=document.getElementById('cakeFx');
+  if(fx){
+    fx.innerHTML='';
+    if(active && NODES[active]){
+      const nd=NODES[active];
+      fx.appendChild(el('circle',{cx:nd.x,cy:nd.y,r:nodeR(nd)+9,fill:'none',stroke:'#4a6cf5','stroke-width':'2.5'}));
+      const t=el('text',{x:nd.x,y:nd.y-nodeR(nd)-9,'text-anchor':'middle','font-weight':'600',fill:'#20232b',stroke:'#fff','stroke-width':'3.4','paint-order':'stroke'});
+      t.setAttribute('font-size','14');
+      t.textContent=trunc(stripExt(nd.doc.title),18);
+      fx.appendChild(t);
+    }
+  }
+  document.querySelectorAll('.tl-item').forEach(r=>r.classList.toggle('hl', String(r.dataset.id)===String(active)));
+  if(cakeSelected && cakeSelected!==_lastCakeSel){
+    const r=document.querySelector(`.tl-item[data-id="${cakeSelected}"]`);
+    if(r) r.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  _lastCakeSel=cakeSelected;
+  renderCakeInspector();
+}
+function renderCakeInspector(){
+  const ins=document.getElementById('cakeInsp');
+  if(!ins) return;
+  const active=cakeSelected;
+  if(!active || !NODES[active]){ ins.classList.remove('show'); return; }
+  const nd=NODES[active], d=nd.doc, tier=TIER_DEF[tierOf(d.importance)], col=typeColor(d.doc_type||'一般');
+  ins.innerHTML=`
+    <button class="insp-close" aria-label="閉じる">×</button>
+    <div class="insp-head">
+      <div class="insp-icon" style="background:${col}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+      </div>
+      <div style="min-width:0">
+        <div class="insp-name">${esc(stripExt(d.title))}</div>
+        <div class="insp-crumb"><span class="d" style="background:${col}"></span>${esc(d.doc_type||'一般')} <i>·</i> ${esc(tier.label)}／${esc(tier.sub)}</div>
+      </div>
+    </div>
+    <div class="insp-meta">
+      <span class="mtag">${esc(d.doc_type||'一般')}</span>
+      <span class="mtag">${esc(dateLabel(d.updated_at))}</span>
+      <span class="mtag">${esc(fmtSize(d.size_bytes))}</span>
+    </div>
+    ${d.summary?`<p class="insp-sec">要約</p><p style="font-size:13.5px;color:#5b6270;line-height:1.7">${esc(d.summary)}</p>`:''}
+    <button class="biz-preview-btn" style="margin-top:12px" data-id="${esc(d.id)}">${ICON.doc} 原本を見る</button>`;
+  ins.querySelector('.insp-close').addEventListener('click',()=>{ cakeSelected=null; cakeHover=null; hideTip(); cakeRender(); });
+  ins.querySelector('.biz-preview-btn').addEventListener('click',()=>openDocPreview(d.id));
+  ins.classList.add('show');
+}
+function tipFill(nd){ document.getElementById('cakeTip').innerHTML=`<b>${esc(stripExt(nd.doc.title))}</b><span>${esc(nd.doc.doc_type||'一般')} · ${esc(TIER_DEF[tierOf(nd.doc.importance)].label)} · ${esc(dateLabel(nd.doc.updated_at))}</span>`; }
+function clampTip(x,y){ x=Math.max(8,Math.min(x, innerWidth-244)); y=Math.max(8,Math.min(y, innerHeight-58)); return [x,y]; }
+function showTipEvent(ev,nd){ tipFill(nd); document.getElementById('cakeTip').classList.add('show'); moveTip(ev); }
+function showTipNode(nd){
+  tipFill(nd); const t=document.getElementById('cakeTip'); t.classList.add('show');
+  const svgEl=document.getElementById('cake'); const r=svgEl.getBoundingClientRect();
+  const [x,y]=clampTip(r.left+(nd.x-VB.x)/VB.s*r.width+16, r.top+(nd.y-VB.y)/VB.s*r.height+16);
+  t.style.left=x+'px'; t.style.top=y+'px';
+}
+function moveTip(ev){ const [x,y]=clampTip(ev.clientX+16, ev.clientY+16); const t=document.getElementById('cakeTip'); t.style.left=x+'px'; t.style.top=y+'px'; }
+function hideTip(){ const t=document.getElementById('cakeTip'); if(t) t.classList.remove('show'); }
+
+let _cakeRotRaf=false;
+function scheduleCakeRotate(){
+  if(_cakeRotRaf) return; _cakeRotRaf=true;
+  requestAnimationFrame(()=>{ _cakeRotRaf=false; computeGraph(); buildGraph(); cakeRender(); });
+}
+function renderCake(){ computeGraph(); buildGraph(); cakeRender(); }
+
+function renderMgrFilters(){
+  const tiers=[['core','上段','コア / 最重要'],['deliverable','中段','成果物'],['reference','下段','参考 / 履歴']];
+  document.getElementById('fTier').innerHTML = tiers.map(([k,label,sub])=>{
+    const count=DOCS.filter(d=>tierOf(d.importance)===k).length;
+    return `<label class="flt"><input type="checkbox" data-tier="${k}" ${MGR_TIERS.has(k)?'checked':''}>
+      <span style="flex:1"><span class="flabel">${label}</span><div class="fsub">${sub}</div></span><span class="fcount">${count}</span></label>`;
+  }).join('');
+  const types=[...ALL_TYPES].sort();
+  document.getElementById('fType').innerHTML = types.map(t=>{
+    const count=DOCS.filter(d=>(d.doc_type||'一般')===t).length;
+    return `<label class="flt"><input type="checkbox" data-type="${esc(t)}" ${MGR_TYPES.has(t)?'checked':''}>
+      <span class="fdot" style="background:${typeColor(t)}"></span>
+      <span class="flabel" style="flex:1">${esc(t)}</span><span class="fcount">${count}</span></label>`;
+  }).join('');
+  document.querySelectorAll('#fTier input').forEach(cb=>cb.onchange=()=>{
+    if(cb.checked) MGR_TIERS.add(cb.dataset.tier); else MGR_TIERS.delete(cb.dataset.tier);
+    renderCake();renderTimeline();
+  });
+  document.querySelectorAll('#fType input').forEach(cb=>cb.onchange=()=>{
+    if(cb.checked) MGR_TYPES.add(cb.dataset.type); else MGR_TYPES.delete(cb.dataset.type);
+    renderCake();renderTimeline();
+  });
+}
+function renderTimeline(){
+  const docs=visibleDocs();
+  document.getElementById('tcount').textContent=`新しい順・${docs.length}件`;
+  let html='',lastMonth='';
+  docs.forEach(d=>{
+    const m=monthLabel(d.updated_at);
+    if(m!==lastMonth){html+=`<div class="tl-month">${m}</div>`;lastMonth=m;}
+    const t=TIER_DEF[tierOf(d.importance)];
+    html+=`<div class="tl-item" data-id="${d.id}">
+      <span class="tdot" style="background:${typeColor(d.doc_type||'一般')}"></span>
+      <div class="tinfo">
+        <div class="ttitle">${esc(stripExt(d.title))}</div>
+        <div class="tmeta">${esc(d.doc_type||'一般')} ・ ${dateLabel(d.updated_at)}</div>
+        <div class="tl-summary">${esc(d.summary||'')}</div>
+      </div>
+      <span class="ttier">${t.label}</span>
+    </div>`;
+  });
+  document.getElementById('tlist').innerHTML = html || '<div style="font-size:13.5px;color:var(--text-3)">表示できる資料がありません</div>';
+  document.querySelectorAll('.tl-item').forEach(rowEl=>rowEl.onclick=()=>{
+    const id=rowEl.dataset.id;
+    cakeSelected = String(cakeSelected)===id ? null : id;
+    cakeHover=null; hideTip();
+    cakeRender();
+  });
+}
+
+let MGR_VIEW='cake';
+
+function mgrCakeAsideHtml(){
+  return `
+    <div class="mgr-toggle mgr-agg-toggle">
+      <button data-agg="0" class="${MGR_AGG?'':'active'}">個別</button>
+      <button data-agg="1" class="${MGR_AGG?'active':''}">集約</button>
+    </div>
+    <h3>段 / 重要度</h3>
+    <div id="fTier"></div>
+    <h3 style="margin-top:20px">色 / 種類</h3>
+    <div id="fType"></div>`;
+}
+function mgrCakeMainHtml(){
+  return `
+    <div class="cakehead">
+      <div><span class="ttl">ナレッジの見取り図</span><span class="cap">段=重要度・色=種類・奥行き=時系列</span></div>
+      <button class="addfile-btn" id="addfile">＋ ファイル追加</button>
+      <input type="file" id="mgrFileInput" multiple style="display:none">
+    </div>
+    <div class="cakebox" id="cakebox">
+      <svg viewBox="0 0 900 900" class="cakesvg" id="cake" role="img" aria-label="3D データケーキ"></svg>
+    </div>
+    <div class="cake-hint">マウスホイールで回転・ダブルクリックで正面に戻る</div>`;
+}
+function mgrCakeRightHtml(){
+  return `<h3>タイムライン</h3><div class="tcount" id="tcount"></div><div id="tlist"></div>`;
+}
+function mgrGraphAsideHtml(){
+  return `
+    <p class="struct-desc">ファイル同士の意味的な繋がりから、ナレッジの構造を俯瞰する。</p>
+    <h3>種類 / 色</h3>
+    <div id="structLegend"></div>`;
+}
+function mgrGraphMainHtml(){
+  return `<div class="mgr-graph-embed" id="mgrGraphMain">
+    <svg class="struct-svg" id="structSvg" viewBox="0 0 ${GRAPH_W} ${GRAPH_H}" role="img" aria-label="ファイルのつながりグラフ"></svg>
+    <div class="struct-hint">ホイールで拡大縮小・ドラッグで移動・ダブルクリックでリセット</div>
+  </div>`;
+}
+function mgrGraphRightHtml(){
+  return `<div id="structDetail"><h3>詳細</h3><div class="struct-detail-empty">読み込み中…</div></div>`;
+}
+
+async function showManager(){
+  VIEW='manager'; setRail('manager');
+  if(!DOCS.length && MGR_TYPES===null) await loadDocs();
+  else if(!DOCS.length) await loadDocs();
+  if(MGR_VIEW==='graph') await loadGraph();
+  const isGraph = MGR_VIEW==='graph';
+  SHEET.innerHTML = `
+  <div class="view-full mgr-wrap">
+    <div class="mgr-aside fu-s" style="--d:0s">
+      <div class="mgr-toggle mgr-view-toggle">
+        <button data-view="cake" class="${isGraph?'':'active'}">ケーキ</button>
+        <button data-view="graph" class="${isGraph?'active':''}">つながり</button>
+      </div>
+      ${isGraph ? mgrGraphAsideHtml() : mgrCakeAsideHtml()}
+    </div>
+    <div class="mgr-main fu-s ${isGraph?'is-graph':''}" style="--d:.06s">${isGraph ? mgrGraphMainHtml() : mgrCakeMainHtml()}</div>
+    <div class="mgr-timeline fu-s" style="--d:.12s">${isGraph ? mgrGraphRightHtml() : mgrCakeRightHtml()}</div>
+  </div>
+  ${isGraph ? `<div class="struct-tooltip" id="structTip"></div>` : `<div class="cake-tip" id="cakeTip"></div><aside class="cake-insp" id="cakeInsp"></aside>`}`;
+  document.querySelectorAll('.mgr-view-toggle button').forEach(b=>b.onclick=()=>{
+    if(MGR_VIEW===b.dataset.view) return;
+    MGR_VIEW=b.dataset.view;
+    showManager();
+  });
+
+  if(isGraph){
+    gSelected=null; gHover=null; gDragging=null;
+    if(!GRAPH.nodes || !GRAPH.nodes.length){
+      document.getElementById('mgrGraphMain').innerHTML = `<div class="struct-empty-state"><div class="big">文書がまだありません</div><div style="font-size:13.5px">ファイルを追加すると、ここに意味的な繋がりが表示されます。</div></div>`;
+      document.getElementById('structLegend').innerHTML = '<div style="font-size:13px;color:var(--text-3)">データがありません</div>';
+      return;
+    }
+    renderStructLegend();
+    initGraphLayout();
+    buildStructureSvg();
+    renderStructDetail();
+    runSim();
+    return;
+  }
+
+  renderMgrFilters();
+  renderCake();
+  renderTimeline();
+  document.getElementById('addfile').onclick=()=>document.getElementById('mgrFileInput').click();
+  document.getElementById('mgrFileInput').onchange=async(e)=>{
+    const files=[...e.target.files];
+    if(!files.length) return;
+    const btn=document.getElementById('addfile');
+    if(btn) btn.disabled=true;
+    for(const f of files){
+      if(btn) btn.textContent=`アップロード中… ${f.name}`;
+      const fd=new FormData();
+      fd.append('path','web-upload/'+ME.name+'/'+Date.now()+'-'+f.name);
+      fd.append('file',f,f.name);
+      try{await apiFetch('/ingest',{method:'POST',headers:authHeaders(),body:fd});}catch(err){}
+    }
+    await loadDocs();
+    showManager();
+  };
+  document.querySelectorAll('.mgr-agg-toggle button').forEach(b=>b.onclick=()=>{
+    MGR_AGG=b.dataset.agg==='1';
+    document.querySelectorAll('.mgr-agg-toggle button').forEach(x=>x.classList.toggle('active',x===b));
+    renderCake();
+  });
+  const cakeSvgEl=document.getElementById('cake');
+  cakeSvgEl.addEventListener('wheel', e=>{
+    e.preventDefault();
+    azimuth=Math.max(AZ_MIN, Math.min(AZ_MAX, azimuth+(e.deltaY>0?1:-1)*0.05));
+    hideTip(); scheduleCakeRotate();
+  }, {passive:false});
+  cakeSvgEl.addEventListener('dblclick', ()=>{ azimuth=0; scheduleCakeRotate(); });
+  cakeSvgEl.addEventListener('click', e=>{ if(!e.target.closest('circle')){ cakeSelected=null; hideTip(); cakeRender(); } });
+}
+
+/* ---------------- つながりグラフ(force-directed) ---------------- */
+let GRAPH=null;
+let GNODES={};
+let GEDGES=[];
+let gSelected=null, gHover=null, gDragging=null;
+let gSimRaf=null, gSimIter=0;
+const GRAPH_W=760, GRAPH_H=760, GRAPH_SIM_MAX=200;
+
+async function loadGraph(){
+  try{
+    const r=await apiFetch('/api/graph',{headers:authHeaders()});
+    GRAPH = r.ok ? await r.json() : {nodes:[],edges:[],types:[]};
+  }catch(e){ GRAPH={nodes:[],edges:[],types:[]}; }
+  if(!GRAPH || !Array.isArray(GRAPH.nodes)) GRAPH={nodes:[],edges:[],types:[]};
+}
+function graphDegree(id){
+  let n=0;
+  (GRAPH.edges||[]).forEach(e=>{ if(String(e.source)===String(id)||String(e.target)===String(id)) n++; });
+  return n;
+}
+function nodeRadius(nd){ return 5 + Math.min(9, Math.sqrt((nd.degree||0)+1)*2.5); }
+function initGraphLayout(){
+  const nodes=GRAPH.nodes||[];
+  const cx=GRAPH_W/2, cy=GRAPH_H/2, rad=Math.min(GRAPH_W,GRAPH_H)*0.32;
+  GNODES={};
+  nodes.forEach((n,i)=>{
+    const ang=(i/Math.max(1,nodes.length))*Math.PI*2;
+    GNODES[n.id]={...n,
+      x:cx+Math.cos(ang)*rad+(Math.random()-0.5)*24,
+      y:cy+Math.sin(ang)*rad+(Math.random()-0.5)*24,
+      vx:0, vy:0, degree:graphDegree(n.id)};
+  });
+  GEDGES=(GRAPH.edges||[]).filter(e=>GNODES[e.source]&&GNODES[e.target]);
+}
+function connectedIds(id){
+  const set=new Set([String(id)]);
+  GEDGES.forEach(e=>{
+    if(String(e.source)===String(id)) set.add(String(e.target));
+    if(String(e.target)===String(id)) set.add(String(e.source));
+  });
+  return set;
+}
+function simStep(){
+  const ids=Object.keys(GNODES);
+  const cx=GRAPH_W/2, cy=GRAPH_H/2;
+  ids.forEach(id=>{
+    const a=GNODES[id];
+    let fx=(cx-a.x)*0.006, fy=(cy-a.y)*0.006;
+    for(const id2 of ids){
+      if(id2===id) continue;
+      const b=GNODES[id2];
+      let dx=a.x-b.x, dy=a.y-b.y;
+      let d2=dx*dx+dy*dy; if(d2<1) d2=1;
+      const d=Math.sqrt(d2);
+      const rep=2600/d2;
+      fx+=(dx/d)*rep; fy+=(dy/d)*rep;
+    }
+    a._fx=fx; a._fy=fy;
+  });
+  GEDGES.forEach(e=>{
+    const a=GNODES[e.source], b=GNODES[e.target];
+    if(!a||!b) return;
+    let dx=b.x-a.x, dy=b.y-a.y;
+    let d=Math.sqrt(dx*dx+dy*dy)||0.01;
+    const rest=88;
+    const k=0.02*(0.3+(e.weight||0.5));
+    const force=(d-rest)*k;
+    const ux=dx/d, uy=dy/d;
+    a._fx+=ux*force; a._fy+=uy*force;
+    b._fx-=ux*force; b._fy-=uy*force;
+  });
+  ids.forEach(id=>{
+    if(gDragging===id) return;
+    const nd=GNODES[id];
+    nd.vx=(nd.vx+nd._fx)*0.82;
+    nd.vy=(nd.vy+nd._fy)*0.82;
+    nd.x+=nd.vx; nd.y+=nd.vy;
+    const r=nodeRadius(nd);
+    nd.x=Math.max(r,Math.min(GRAPH_W-r,nd.x));
+    nd.y=Math.max(r,Math.min(GRAPH_H-r,nd.y));
+  });
+}
+function fitStructViewBox(){ structView.fit(GNODES, nodeRadius, 16, 16); }
+function runSim(){
+  if(gSimRaf) cancelAnimationFrame(gSimRaf);
+  gSimIter=0;
+  const tick=()=>{
+    for(let k=0;k<3;k++) simStep();
+    gSimIter+=3;
+    updateGraphPositions();
+    if(gSimIter<GRAPH_SIM_MAX){ gSimRaf=requestAnimationFrame(tick); } else { gSimRaf=null; fitStructViewBox(); }
+  };
+  gSimRaf=requestAnimationFrame(tick);
+}
+function svgPoint(svg, clientX, clientY){
+  const pt=svg.createSVGPoint(); pt.x=clientX; pt.y=clientY;
+  const ctm=svg.getScreenCTM();
+  if(!ctm) return [clientX, clientY];
+  const p=pt.matrixTransform(ctm.inverse());
+  return [p.x, p.y];
+}
+function createGraphView(svgId, defaultW, defaultH){
+  return {
+    svgId,
+    vb:{x:0,y:0,w:defaultW,h:defaultH},
+    fitVB:{x:0,y:0,w:defaultW,h:defaultH},
+    apply(){
+      const svg=document.getElementById(this.svgId);
+      if(svg) svg.setAttribute('viewBox', `${this.vb.x.toFixed(1)} ${this.vb.y.toFixed(1)} ${this.vb.w.toFixed(1)} ${this.vb.h.toFixed(1)}`);
+    },
+    fit(nodes, radiusFn, padTop, padBottom){
+      const ids=Object.keys(nodes);
+      if(!ids.length) return;
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      ids.forEach(id=>{
+        const nd=nodes[id], r=radiusFn(nd);
+        minX=Math.min(minX,nd.x-r); maxX=Math.max(maxX,nd.x+r);
+        minY=Math.min(minY,nd.y-r-(padTop??16)); maxY=Math.max(maxY,nd.y+r+(padBottom??16));
+      });
+      const pad=50;
+      const w=Math.max(maxX-minX,200)+pad*2, h=Math.max(maxY-minY,160)+pad*2;
+      const cx=(minX+maxX)/2, cy=(minY+maxY)/2;
+      this.fitVB={x:cx-w/2, y:cy-h/2, w, h};
+      this.vb={...this.fitVB};
+      this.apply();
+    },
+    bindInteractions(nodeSelector){
+      const svg=document.getElementById(this.svgId);
+      if(!svg || svg.dataset.panZoomBound) return;
+      svg.dataset.panZoomBound='1';
+      const self=this;
+      svg.addEventListener('wheel', e=>{
+        e.preventDefault();
+        const factor = e.deltaY>0 ? 1.1 : 0.9;
+        const [mx,my]=svgPoint(svg, e.clientX, e.clientY);
+        const minW=self.fitVB.w/4, maxW=self.fitVB.w/0.3;
+        const newW=Math.max(minW, Math.min(maxW, self.vb.w*factor));
+        const scale=newW/self.vb.w;
+        const newH=self.vb.h*scale;
+        self.vb={x:mx-(mx-self.vb.x)*scale, y:my-(my-self.vb.y)*scale, w:newW, h:newH};
+        self.apply();
+      }, {passive:false});
+      svg.addEventListener('pointerdown', e=>{
+        if(e.target.closest(nodeSelector)) return;
+        e.preventDefault();
+        svg.classList.add('panning');
+        const startClientX=e.clientX, startClientY=e.clientY;
+        const startVB={...self.vb};
+        const rect=svg.getBoundingClientRect();
+        const move=ev=>{
+          const dx=ev.clientX-startClientX, dy=ev.clientY-startClientY;
+          const sx=startVB.w/rect.width, sy=startVB.h/rect.height;
+          self.vb={x:startVB.x-dx*sx, y:startVB.y-dy*sy, w:startVB.w, h:startVB.h};
+          self.apply();
+        };
+        const up=()=>{
+          svg.classList.remove('panning');
+          window.removeEventListener('pointermove',move);
+          window.removeEventListener('pointerup',up);
+        };
+        window.addEventListener('pointermove',move);
+        window.addEventListener('pointerup',up);
+      });
+      svg.addEventListener('dblclick', ()=>{ self.vb={...self.fitVB}; self.apply(); });
+    }
+  };
+}
+const structView=createGraphView('structSvg', GRAPH_W, GRAPH_H);
+function startNodeDrag(ev, nd){
+  ev.preventDefault(); ev.stopPropagation();
+  const svg=document.getElementById('structSvg');
+  gDragging=String(nd.id);
+  const move=e=>{
+    const [x,y]=svgPoint(svg, e.clientX, e.clientY);
+    const r=nodeRadius(nd);
+    nd.x=Math.max(r,Math.min(GRAPH_W-r,x));
+    nd.y=Math.max(r,Math.min(GRAPH_H-r,y));
+    nd.vx=0; nd.vy=0;
+    updateGraphPositions();
+  };
+  const up=()=>{
+    gDragging=null;
+    window.removeEventListener('pointermove',move);
+    window.removeEventListener('pointerup',up);
+    gSimIter=Math.max(0, GRAPH_SIM_MAX-50);
+    runSim();
+  };
+  window.addEventListener('pointermove',move);
+  window.addEventListener('pointerup',up);
+}
+function buildStructureSvg(){
+  const svg=document.getElementById('structSvg');
+  if(!svg) return;
+  svg.innerHTML='';
+  svg.setAttribute('viewBox', `0 0 ${GRAPH_W} ${GRAPH_H}`);
+  const gEdges=el('g',{id:'gEdges'});
+  const gNodes=el('g',{id:'gNodes'});
+  GEDGES.forEach(e=>{
+    const a=GNODES[e.source], b=GNODES[e.target];
+    if(!a||!b) return;
+    const w=e.weight||0.4;
+    const line=el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,
+      stroke:'#5b6270','stroke-width':'1','stroke-opacity':(0.14+w*0.55).toFixed(2)});
+    line.dataset.s=e.source; line.dataset.t=e.target;
+    gEdges.appendChild(line);
+  });
+  Object.values(GNODES).forEach((nd,i)=>{
+    const grp=el('g',{class:'struct-node',tabindex:'0',role:'button'});
+    grp.dataset.id=nd.id;
+    const col=typeColor(nd.doc_type||'一般');
+    const r=nodeRadius(nd);
+    const c=el('circle',{cx:nd.x,cy:nd.y,r:0,fill:col,'fill-opacity':1,stroke:'#ffffff','stroke-width':'1.6'});
+    c.style.transitionDelay=Math.min(i*0.02,0.3)+'s';
+    const ttl=el('title',{}); ttl.textContent=`${nd.title} — ${nd.doc_type||'一般'}`; c.appendChild(ttl);
+    const label=trunc(stripExt(nd.title||''),10);
+    const t=el('text',{x:nd.x,y:nd.y+r+15,'text-anchor':'middle','font-size':'8.5'});
+    t.textContent=label;
+    grp.appendChild(c); grp.appendChild(t);
+    const enter=ev=>{ gHover=String(nd.id); showStructTip(ev,nd); highlightGraph(); };
+    const leave=()=>{ gHover=null; hideStructTip(); highlightGraph(); };
+    grp.addEventListener('mouseenter',enter);
+    grp.addEventListener('mousemove',ev=>moveStructTip(ev));
+    grp.addEventListener('mouseleave',leave);
+    grp.addEventListener('focus',()=>{ gHover=String(nd.id); highlightGraph(); });
+    grp.addEventListener('blur',leave);
+    const toggle=()=>{ gSelected = gSelected===String(nd.id)?null:String(nd.id); renderStructDetail(); highlightGraph(); };
+    grp.addEventListener('click',ev=>{ ev.stopPropagation(); toggle(); });
+    grp.addEventListener('keydown',ev=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); toggle(); } });
+    grp.addEventListener('pointerdown',ev=>startNodeDrag(ev,nd));
+    gNodes.appendChild(grp);
+    requestAnimationFrame(()=>c.setAttribute('r', r));
+  });
+  svg.appendChild(gEdges); svg.appendChild(gNodes);
+  svg.addEventListener('click', e=>{ if(!e.target.closest('.struct-node')){ gSelected=null; renderStructDetail(); highlightGraph(); } });
+  structView.bindInteractions('.struct-node');
+}
+function updateGraphPositions(){
+  document.querySelectorAll('#gNodes .struct-node').forEach(grp=>{
+    const nd=GNODES[grp.dataset.id]; if(!nd) return;
+    const c=grp.querySelector('circle'), t=grp.querySelector('text');
+    c.setAttribute('cx',nd.x); c.setAttribute('cy',nd.y);
+    t.setAttribute('x',nd.x); t.setAttribute('y',nd.y+nodeRadius(nd)+15);
+  });
+  document.querySelectorAll('#gEdges line').forEach(line=>{
+    const a=GNODES[line.dataset.s], b=GNODES[line.dataset.t];
+    if(!a||!b) return;
+    line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+    line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+  });
+}
+function highlightGraph(){
+  const active=gSelected||gHover;
+  const conn = active ? connectedIds(active) : null;
+  document.querySelectorAll('#gNodes .struct-node').forEach(grp=>{
+    const id=String(grp.dataset.id);
+    const c=grp.querySelector('circle');
+    const base=nodeRadius(GNODES[id]||{degree:0});
+    if(active){
+      const on=conn.has(id);
+      c.setAttribute('r', id===active? base+2 : base);
+      c.setAttribute('fill-opacity', on?1:0.15);
+      c.setAttribute('stroke-width', id===active?'3':'2');
+    } else {
+      c.setAttribute('r', base);
+      c.setAttribute('fill-opacity','1');
+      c.setAttribute('stroke-width','2');
+    }
+  });
+  document.querySelectorAll('#gEdges line').forEach(line=>{
+    if(active){
+      const on = line.dataset.s===active || line.dataset.t===active;
+      line.style.opacity = on? '1' : '0.1';
+    } else {
+      line.style.opacity='';
+    }
+  });
+}
+function showStructTip(ev,nd){
+  const tip=document.getElementById('structTip'); if(!tip) return;
+  tip.innerHTML=`<b>${esc(stripExt(nd.title))}</b><span>${esc(nd.doc_type||'一般')}</span>${nd.summary?`<span>${esc(trunc(nd.summary,64))}</span>`:''}`;
+  tip.classList.add('show');
+  moveStructTip(ev);
+}
+function moveStructTip(ev){
+  const tip=document.getElementById('structTip'); if(!tip) return;
+  const x=Math.max(8,Math.min(ev.clientX+16, innerWidth-256));
+  const y=Math.max(8,Math.min(ev.clientY+16, innerHeight-70));
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+function hideStructTip(){ const t=document.getElementById('structTip'); if(t) t.classList.remove('show'); }
+function renderStructLegend(){
+  const wrap=document.getElementById('structLegend'); if(!wrap) return;
+  let types=(GRAPH.types&&GRAPH.types.length) ? GRAPH.types : null;
+  if(!types){
+    const m={};
+    (GRAPH.nodes||[]).forEach(n=>{ const t=n.doc_type||'一般'; m[t]=(m[t]||0)+1; });
+    types=Object.entries(m).map(([name,count])=>({name,count}));
+  }
+  wrap.innerHTML = types.map(t=>`<div class="struct-legend-item">
+    <span class="dot" style="background:${typeColor(t.name)}"></span>
+    <span class="name">${esc(t.name)}</span><span class="count">${t.count}件</span></div>`).join('');
+}
+function renderStructDetail(){
+  const panel=document.getElementById('structDetail'); if(!panel) return;
+  if(!gSelected || !GNODES[gSelected]){
+    panel.innerHTML=`<h3>詳細</h3><div class="struct-detail-empty">ノードをクリックすると、タイトル・種別・重要度・要約と、繋がっている文書の一覧が表示されます。</div>`;
+    return;
+  }
+  const nd=GNODES[gSelected];
+  const linked=GEDGES.filter(e=>String(e.source)===gSelected||String(e.target)===gSelected)
+    .map(e=>{ const otherId=String(e.source)===gSelected?e.target:e.source; return {other:GNODES[otherId], weight:e.weight}; })
+    .filter(x=>x.other)
+    .sort((a,b)=>(b.weight||0)-(a.weight||0));
+  panel.innerHTML=`
+    <h3>詳細</h3>
+    <div class="struct-detail-title">${esc(stripExt(nd.title))}</div>
+    <div class="struct-detail-meta">
+      <span class="mtag">${esc(nd.doc_type||'一般')}</span>
+      <span class="mtag">${esc(TIER_DEF[tierOf(nd.importance)].label)}</span>
+      <span class="mtag">${esc(dateLabel(nd.updated_at))}</span>
+    </div>
+    ${nd.summary?`<div class="struct-detail-summary">${esc(nd.summary)}</div>`:''}
+    <div class="struct-detail-links">
+      <h4>繋がっている文書（${linked.length}）</h4>
+      ${linked.length? linked.map(l=>`<div class="struct-link-item" data-id="${esc(l.other.id)}">
+          <span class="dot" style="background:${typeColor(l.other.doc_type||'一般')}"></span>
+          <span>${esc(trunc(stripExt(l.other.title||''),20))}</span>
+          <span class="w">${Math.round((l.weight||0)*100)}%</span>
+        </div>`).join('') : '<div style="font-size:13px;color:var(--text-3)">繋がりのある文書はありません</div>'}
+    </div>
+    <button class="biz-preview-btn" data-id="${esc(nd.id)}">${ICON.doc} 原本を見る</button>`;
+  panel.querySelectorAll('.struct-link-item').forEach(row=>row.onclick=()=>{
+    gSelected=row.dataset.id; renderStructDetail(); highlightGraph();
+  });
+  panel.querySelector('.biz-preview-btn').onclick=()=>openDocPreview(nd.id);
+}
+
+/* ---------------- 業務構造(AI推定の業務フロー / Obsidianグラフ風) ---------------- */
+let BIZFLOW=null;
+let bizLoaded=false;
+let bizSelected=null;
+let bizHover=null;
+let BIZ_AGG=true;
+let BNODES={};
+let BEDGES=[];
+let bizSimRaf=null, bizSimIter=0;
+const BIZ_W=1000, BIZ_H=600, BIZ_SIM_MAX=200;
+const bizView=createGraphView('bizSvg', BIZ_W, BIZ_H);
+
+let ADMIN_INSIGHTS=null, adminInsightsLoaded=false;
+const INSIGHT_CATEGORY_LABELS={gap:'ナレッジの穴',duplication:'重複・二重管理',risk:'リスク',bottleneck:'属人化・ボトルネック',opportunity:'改善機会'};
+async function loadAdminInsightsIfNeeded(){
+  if(!ME || ME.role!=='admin' || adminInsightsLoaded) return;
+  adminInsightsLoaded=true;
+  try{
+    const r=await apiFetch('/api/admin/insights',{headers:authHeaders()});
+    if(r.ok){ const d=await r.json(); ADMIN_INSIGHTS=d.report||null; }
+  }catch(e){}
+}
+function bizRelatedFindings(s){
+  if(!ADMIN_INSIGHTS || !Array.isArray(ADMIN_INSIGHTS.findings)) return [];
+  const docTitles=new Set(s.doc_titles||[]);
+  const out=[];
+  for(const f of ADMIN_INSIGHTS.findings){
+    const overlap=(f.evidence_titles||[]).some(t=>docTitles.has(t));
+    const gapMatch=(s.health==='gap'||s.health==='thin') && f.category==='gap';
+    if(overlap||gapMatch){ out.push(f); if(out.length>=3) break; }
+  }
+  return out;
+}
+function bizInsightsSectionHtml(s){
+  if(!ME || ME.role!=='admin' || !ADMIN_INSIGHTS) return '';
+  const findings=bizRelatedFindings(s);
+  return `<div class="struct-detail-links" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
+    <h4>関連する改善提案</h4>
+    ${findings.length? findings.map(f=>`<div class="struct-link-item biz-insight-item" data-title="${esc(f.title)}">
+        <span class="dot" style="background:var(--accent)"></span><span>${esc(f.title)}</span>
+        <span class="w">${esc(INSIGHT_CATEGORY_LABELS[f.category]||f.category||'')}</span>
+      </div>`).join('') : '<div style="font-size:13px;color:var(--text-3)">関連する改善提案は見つかりませんでした</div>'}
+  </div>`;
+}
+
+async function loadBizFlow(){
+  try{
+    const r=await apiFetch('/api/structure',{headers:authHeaders()});
+    const d = r.ok ? await r.json() : {map:null};
+    BIZFLOW = d.map || null;
+  }catch(e){ BIZFLOW=null; }
+  bizLoaded=true;
+}
+function bizHealthLabel(h){ return h==='gap' ? '資料不足' : (h==='thin' ? '資料が薄い' : '資料十分'); }
+
+function buildBizGraphData(map, agg){
+  const stages=map.stages||[];
+  const nodes={}, edges=[];
+  const n=stages.length;
+  const marginX=BIZ_W*0.12, cy=BIZ_H/2;
+  stages.forEach((s,i)=>{
+    const tx = n>1 ? marginX+(i/(n-1))*(BIZ_W-2*marginX) : BIZ_W/2;
+    nodes[s.id] = {id:s.id, type:'stage', stage:s, order:i, targetX:tx,
+      x: tx+(Math.random()-0.5)*20, y: cy+(Math.random()-0.5)*50, vx:0, vy:0};
+  });
+  (map.flows||[]).forEach(f=>{
+    if(nodes[f.from] && nodes[f.to]) edges.push({source:f.from, target:f.to, kind:'flow'});
+  });
+  if(!agg){
+    stages.forEach(s=>{
+      (s.doc_ids||[]).forEach((docId,di)=>{
+        const title=(s.doc_titles||[])[di] || docId;
+        const did=`d_${s.id}_${docId}_${di}`;
+        const parent=nodes[s.id];
+        const ang=Math.random()*Math.PI*2, rad=30+Math.random()*16;
+        nodes[did] = {id:did, type:'doc', title, parentId:s.id, docId,
+          x: parent.x+Math.cos(ang)*rad, y: parent.y+Math.sin(ang)*rad, vx:0, vy:0};
+        edges.push({source:s.id, target:did, kind:'doc'});
+      });
+    });
+  }
+  return {nodes, edges};
+}
+function bizSimStep(){
+  const ids=Object.keys(BNODES);
+  ids.forEach(id=>{
+    const a=BNODES[id];
+    let fx=0, fy=0;
+    if(a.type==='stage'){
+      fx += (a.targetX-a.x)*0.02;
+      fy += (BIZ_H/2-a.y)*0.015;
+    } else {
+      const p=BNODES[a.parentId];
+      if(p){ fx += (p.x-a.x)*0.0025; fy += (p.y-a.y)*0.0025; }
+    }
+    for(const id2 of ids){
+      if(id2===id) continue;
+      const b=BNODES[id2];
+      let dx=a.x-b.x, dy=a.y-b.y;
+      let d2=dx*dx+dy*dy; if(d2<1) d2=1;
+      const d=Math.sqrt(d2);
+      const rep = (a.type==='stage'&&b.type==='stage') ? 5400/d2 : 950/d2;
+      fx+=(dx/d)*rep; fy+=(dy/d)*rep;
+    }
+    a._fx=fx; a._fy=fy;
+  });
+  BEDGES.forEach(e=>{
+    const a=BNODES[e.source], b=BNODES[e.target];
+    if(!a||!b) return;
+    let dx=b.x-a.x, dy=b.y-a.y;
+    let d=Math.sqrt(dx*dx+dy*dy)||0.01;
+    const rest = e.kind==='flow' ? 210 : 42;
+    const k = e.kind==='flow' ? 0.018 : 0.09;
+    const force=(d-rest)*k;
+    const ux=dx/d, uy=dy/d;
+    a._fx+=ux*force; a._fy+=uy*force;
+    b._fx-=ux*force; b._fy-=uy*force;
+  });
+  ids.forEach(id=>{
+    const nd=BNODES[id];
+    nd.vx=(nd.vx+nd._fx)*0.80;
+    nd.vy=(nd.vy+nd._fy)*0.80;
+    nd.x+=nd.vx; nd.y+=nd.vy;
+  });
+}
+function bizRunSim(){
+  if(bizSimRaf) cancelAnimationFrame(bizSimRaf);
+  bizSimIter=0;
+  const tick=()=>{
+    for(let k=0;k<3;k++) bizSimStep();
+    bizSimIter+=3;
+    updateBizPositions();
+    if(bizSimIter<BIZ_SIM_MAX){ bizSimRaf=requestAnimationFrame(tick); }
+    else { bizSimRaf=null; bizView.fit(BNODES, nd=>nd.type==='stage'?34:14, 22, 16); }
+  };
+  bizSimRaf=requestAnimationFrame(tick);
+}
+function bizNodeRadius(nd){
+  if(nd.type==='doc') return (bizHover===nd.id||bizSelected===nd.id) ? 7 : 5;
+  return (bizHover===nd.id||bizSelected===nd.id) ? 27 : 22;
+}
+function bizConnectedIds(id){
+  const set=new Set([id]);
+  BEDGES.forEach(e=>{
+    if(e.source===id) set.add(e.target);
+    if(e.target===id) set.add(e.source);
+  });
+  return set;
+}
+function bizTipContent(nd){
+  if(nd.type==='doc'){
+    const p=BNODES[nd.parentId];
+    return `<b>${esc(stripExt(nd.title||''))}</b><span>紐づく工程：${p?esc(p.stage.name):''}</span>`;
+  }
+  const s=nd.stage;
+  return `<b>${esc(s.name)}</b><span>資料 ${s.doc_ids.length}件 ・ ${esc(bizHealthLabel(s.health))}</span>`;
+}
+function bizShowTip(ev,nd){
+  const tip=document.getElementById('bizTip'); if(!tip) return;
+  tip.innerHTML=bizTipContent(nd);
+  tip.classList.add('show');
+  bizMoveTip(ev);
+}
+function bizMoveTip(ev){
+  const tip=document.getElementById('bizTip'); if(!tip) return;
+  const x=Math.max(8,Math.min(ev.clientX+16, innerWidth-256));
+  const y=Math.max(8,Math.min(ev.clientY+16, innerHeight-70));
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+function bizHideTip(){ const t=document.getElementById('bizTip'); if(t) t.classList.remove('show'); }
+function bizNodeMounted(g, nd){
+  const enter=ev=>{ bizHover=nd.id; bizShowTip(ev,nd); bizHighlight(); };
+  const leave=()=>{ bizHover=null; bizHideTip(); bizHighlight(); };
+  g.addEventListener('mouseenter',enter);
+  g.addEventListener('mousemove',ev=>bizMoveTip(ev));
+  g.addEventListener('mouseleave',leave);
+  g.addEventListener('focus',()=>{ bizHover=nd.id; bizHighlight(); });
+  g.addEventListener('blur',leave);
+  const toggle=()=>{ bizSelected = bizSelected===nd.id ? null : nd.id; renderBizDetail(); bizHighlight(); };
+  g.addEventListener('click',ev=>{ ev.stopPropagation(); toggle(); });
+  g.addEventListener('keydown',ev=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); toggle(); } });
+}
+function buildBizSvg(){
+  const svg=document.getElementById('bizSvg');
+  if(!svg) return;
+  svg.innerHTML='';
+  svg.setAttribute('viewBox', `0 0 ${BIZ_W} ${BIZ_H}`);
+  const defs=el('defs',{});
+  const filter=el('filter',{id:'bizGlow',x:'-150%',y:'-150%',width:'400%',height:'400%'});
+  filter.appendChild(el('feGaussianBlur',{'in':'SourceGraphic','stdDeviation':'4'}));
+  defs.appendChild(filter);
+  svg.appendChild(defs);
+
+  const gEdges=el('g',{id:'bEdges'});
+  const gNodes=el('g',{id:'bNodes'});
+
+  BEDGES.forEach(e=>{
+    const a=BNODES[e.source], b=BNODES[e.target];
+    if(!a||!b) return;
+    const isFlow=e.kind==='flow';
+    const line=el('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,
+      stroke: isFlow ? 'rgba(235,240,255,.42)' : 'rgba(235,240,255,.16)',
+      'stroke-width': isFlow ? '1.8' : '1'});
+    line.dataset.s=e.source; line.dataset.t=e.target;
+    gEdges.appendChild(line);
+  });
+
+  Object.values(BNODES).filter(n=>n.type==='doc').forEach(nd=>{
+    const g=el('g',{class:'biz-node',tabindex:'0',role:'button','aria-label':`資料：${nd.title}`});
+    g.dataset.id=nd.id;
+    g.appendChild(el('circle',{class:'biz-glow',cx:nd.x,cy:nd.y,r:11,fill:'#e8edff','fill-opacity':0.12,filter:'url(#bizGlow)'}));
+    g.appendChild(el('circle',{class:'biz-core',cx:nd.x,cy:nd.y,r:bizNodeRadius(nd),fill:'#8f9bc9','fill-opacity':0.85,stroke:'#10142b','stroke-width':'1'}));
+    bizNodeMounted(g,nd);
+    gNodes.appendChild(g);
+  });
+
+  Object.values(BNODES).filter(n=>n.type==='stage').forEach(nd=>{
+    const s=nd.stage, issue=s.health!=='ok';
+    const r=bizNodeRadius(nd);
+    const ys=bizLabelYs(r, issue);
+    const g=el('g',{class:'biz-node',tabindex:'0',role:'button','aria-label':`工程：${s.name}`});
+    g.dataset.id=nd.id;
+    g.appendChild(el('circle',{class:'biz-glow',cx:nd.x,cy:nd.y,r:r+10,fill:'#e8edff','fill-opacity':issue?0.08:0.16,filter:'url(#bizGlow)'}));
+    if(issue){
+      const ringColor = s.health==='gap' ? 'rgba(255,140,130,.9)' : 'rgba(235,240,255,.4)';
+      g.appendChild(el('circle',{class:'biz-ring',cx:nd.x,cy:nd.y,r:r+9,fill:'none',stroke:ringColor,'stroke-width':'1.6','stroke-dasharray':'5 4'}));
+    }
+    g.appendChild(el('circle',{class:'biz-core',cx:nd.x,cy:nd.y,r:r,fill:'#f2f5ff','fill-opacity':issue?0.55:1,stroke:'#10142b','stroke-width':'1.5'}));
+    const label=el('text',{class:'biz-label',x:nd.x,y:nd.y+ys.name});
+    label.textContent=trunc(s.name,16);
+    g.appendChild(label);
+    if(BIZ_AGG){
+      const count=el('text',{class:'biz-doc-count-label',x:nd.x,y:nd.y+ys.count});
+      count.textContent=`資料 ${s.doc_ids.length}件`;
+      g.appendChild(count);
+    }
+    if(issue){
+      const flag=el('text',{class:'biz-issue-label '+s.health,x:nd.x,y:nd.y+ys.flag});
+      flag.textContent=bizHealthLabel(s.health);
+      g.appendChild(flag);
+    }
+    bizNodeMounted(g,nd);
+    gNodes.appendChild(g);
+  });
+
+  svg.appendChild(gEdges); svg.appendChild(gNodes);
+  svg.addEventListener('click', e=>{ if(!e.target.closest('.biz-node')){ bizSelected=null; renderBizDetail(); bizHighlight(); } });
+}
+function bizLabelYs(r, issue){
+  const name=r+18;
+  const count=BIZ_AGG ? r+35 : null;
+  const flag=issue ? (BIZ_AGG ? r+51 : r+34) : null;
+  return {name, count, flag};
+}
+function updateBizPositions(){
+  document.querySelectorAll('#bNodes .biz-node').forEach(g=>{
+    const nd=BNODES[g.dataset.id]; if(!nd) return;
+    g.querySelectorAll('circle').forEach(c=>{ c.setAttribute('cx',nd.x); c.setAttribute('cy',nd.y); });
+    if(nd.type==='stage'){
+      const r=bizNodeRadius(nd);
+      const issue=nd.stage.health!=='ok';
+      const ys=bizLabelYs(r, issue);
+      const label=g.querySelector('.biz-label'); if(label){ label.setAttribute('x',nd.x); label.setAttribute('y',nd.y+ys.name); }
+      const count=g.querySelector('.biz-doc-count-label'); if(count){ count.setAttribute('x',nd.x); count.setAttribute('y',nd.y+ys.count); }
+      const flag=g.querySelector('.biz-issue-label'); if(flag){ flag.setAttribute('x',nd.x); flag.setAttribute('y',nd.y+ys.flag); }
+    }
+  });
+  document.querySelectorAll('#bEdges line').forEach(line=>{
+    const a=BNODES[line.dataset.s], b=BNODES[line.dataset.t];
+    if(!a||!b) return;
+    line.setAttribute('x1',a.x); line.setAttribute('y1',a.y);
+    line.setAttribute('x2',b.x); line.setAttribute('y2',b.y);
+  });
+}
+function bizHighlight(){
+  const active=bizSelected||bizHover;
+  const conn = active ? bizConnectedIds(active) : null;
+  document.querySelectorAll('#bNodes .biz-node').forEach(g=>{
+    const id=g.dataset.id, nd=BNODES[id]; if(!nd) return;
+    const core=g.querySelector('.biz-core'), glow=g.querySelector('.biz-glow');
+    const r=bizNodeRadius(nd);
+    if(core) core.setAttribute('r', r);
+    if(glow){
+      glow.setAttribute('r', nd.type==='stage' ? r+10 : r+6);
+      const base = nd.type==='stage' ? (nd.stage.health!=='ok'?0.08:0.16) : 0.12;
+      glow.setAttribute('fill-opacity', id===active ? 0.4 : base);
+    }
+    g.style.opacity = (!active || conn.has(id)) ? '1' : '0.25';
+  });
+  document.querySelectorAll('#bEdges line').forEach(line=>{
+    if(active){
+      const on=line.dataset.s===active || line.dataset.t===active;
+      line.style.opacity = on? '1' : '0.08';
+    } else line.style.opacity='';
+  });
+}
+function renderBizDetail(){
+  const panel=document.getElementById('bizDetail');
+  if(!panel) return;
+  if(!bizSelected){
+    panel.innerHTML = `<h3>詳細</h3><div class="struct-detail-empty">工程・資料のノードをクリックすると、詳細とAIが判定した資料充足度の理由が表示されます。</div>`;
+    return;
+  }
+  const nd=BNODES[bizSelected];
+  if(!nd){ panel.innerHTML = `<h3>詳細</h3><div class="struct-detail-empty">ノードが見つかりません。</div>`; return; }
+  if(nd.type==='doc'){
+    const parent=BNODES[nd.parentId];
+    panel.innerHTML = `
+      <h3>詳細</h3>
+      <div class="struct-detail-title">${esc(stripExt(nd.title||''))}</div>
+      <div class="struct-detail-meta"><span class="mtag">資料</span></div>
+      <div class="struct-detail-links">
+        <h4>紐づく工程</h4>
+        <div class="struct-link-item" data-id="${esc(nd.parentId)}">
+          <span class="dot" style="background:var(--accent)"></span><span>${parent?esc(parent.stage.name):esc(nd.parentId)}</span>
+        </div>
+      </div>
+      <button class="biz-preview-btn" type="button">${ICON.doc} 原本を見る</button>`;
+    const link=panel.querySelector('.struct-link-item');
+    if(link) link.onclick=()=>{ bizSelected=nd.parentId; renderBizDetail(); bizHighlight(); };
+    const prevBtn=panel.querySelector('.biz-preview-btn');
+    if(prevBtn) prevBtn.onclick=()=>openDocPreview(nd.docId);
+    return;
+  }
+  const s=nd.stage;
+  const mtagCls = s.health==='ok' ? 'mtag' : `mtag mtag-${s.health}`;
+  panel.innerHTML = `
+    <h3>詳細</h3>
+    <div class="struct-detail-title">${esc(s.name)}</div>
+    <div class="struct-detail-meta">
+      <span class="mtag">資料 ${s.doc_ids.length}件</span>
+      <span class="${mtagCls}">${bizHealthLabel(s.health)}</span>
+    </div>
+    ${s.description?`<div class="struct-detail-summary">${esc(s.description)}</div>`:''}
+    ${s.note?`<div class="biz-note ${s.health}">${esc(s.note)}</div>`:''}
+    <div class="struct-detail-links">
+      <h4>紐づく資料（${(s.doc_titles||[]).length}）</h4>
+      ${(s.doc_titles||[]).length? s.doc_titles.map((t,idx)=>`<div class="struct-link-item" data-doc-id="${esc((s.doc_ids||[])[idx]||'')}">
+          <span class="dot" style="background:var(--accent)"></span><span>${esc(stripExt(t||''))}</span>
+        </div>`).join('') : '<div style="font-size:13px;color:var(--text-3)">紐づく資料はありません</div>'}
+    </div>
+    ${bizInsightsSectionHtml(s)}`;
+  panel.querySelectorAll('.struct-detail-links .struct-link-item[data-doc-id]').forEach(row=>{
+    const docId=row.dataset.docId;
+    if(!docId) return;
+    row.onclick=()=>openDocPreview(docId);
+  });
+  panel.querySelectorAll('.biz-insight-item').forEach(row=>{
+    row.onclick=()=>showAdmin('insights', row.dataset.title||'');
+  });
+}
+function renderBizLoading(){
+  const wrap=document.getElementById('bizWrap');
+  if(!wrap) return;
+  wrap.innerHTML = `<div class="biz-loading">
+    <span class="loading"><i></i><i></i><i></i></span>
+    <p>業務フローを解析しています…（資料の量により10〜30秒ほどかかります）</p>
+  </div>`;
+}
+function renderBizEmpty(){
+  const wrap=document.getElementById('bizWrap');
+  wrap.innerHTML = `<div class="biz-empty fu-s" style="--d:0s"><div class="biz-empty-inner">
+    <h2>業務フローを可視化する</h2>
+    <p>取り込まれた資料から、AIが実際の業務の流れを推定します。資料が薄い・存在しない工程は「資料不足」として表示されます。</p>
+    <button class="biz-gen-btn" id="bizGenBtn">${ICON.spark} AIで業務フローを生成する</button>
+  </div></div>`;
+  document.getElementById('bizGenBtn').onclick=generateBizFlow;
+}
+function bizRebuildGraph(){
+  const built=buildBizGraphData(BIZFLOW, BIZ_AGG);
+  BNODES=built.nodes; BEDGES=built.edges;
+  buildBizSvg();
+  bizView.bindInteractions('.biz-node');
+  renderBizDetail();
+  bizRunSim();
+}
+function bizSetAggMode(agg){
+  if(BIZ_AGG===agg) return;
+  BIZ_AGG=agg;
+  bizSelected=null; bizHover=null;
+  const wrap=document.getElementById('bizCanvasWrap');
+  if(wrap) wrap.classList.add('fading');
+  setTimeout(()=>{
+    bizRebuildGraph();
+    if(wrap) wrap.classList.remove('fading');
+  }, 180);
+}
+function renderBizFlow(){
+  const wrap=document.getElementById('bizWrap');
+  if(!wrap) return;
+  if(!BIZFLOW || !BIZFLOW.stages || !BIZFLOW.stages.length){ renderBizEmpty(); return; }
+  const map=BIZFLOW;
+  wrap.innerHTML = `<div class="biz-page">
+    <div class="biz-main">
+      <div class="biz-head">
+        <div class="biz-head-title"><div class="biz-title">${esc(map.title)}</div><div class="biz-sub">AIが資料から推定した業務フロー</div></div>
+        <div class="biz-head-actions">
+          <div class="mgr-toggle biz-agg-toggle">
+            <button data-agg="1" class="${BIZ_AGG?'active':''}">集約</button>
+            <button data-agg="0" class="${BIZ_AGG?'':'active'}">個別</button>
+          </div>
+          <button class="biz-regen-btn" id="bizRegenBtn">再生成</button>
+        </div>
+      </div>
+      <div class="biz-canvas-wrap" id="bizCanvasWrap">
+        <svg class="biz-canvas" id="bizSvg" viewBox="0 0 ${BIZ_W} ${BIZ_H}" role="img" aria-label="業務フローグラフ"></svg>
+        <div class="biz-hint">ホイールで拡大縮小・ドラッグで移動・ダブルクリックでリセット</div>
+      </div>
+    </div>
+    <div class="biz-detail fu-s" style="--d:.1s" id="bizDetail"></div>
+  </div>
+  <div class="struct-tooltip" id="bizTip"></div>`;
+  document.getElementById('bizRegenBtn').onclick=generateBizFlow;
+  document.querySelectorAll('.biz-agg-toggle button').forEach(b=>b.onclick=()=>{
+    bizSetAggMode(b.dataset.agg==='1');
+    document.querySelectorAll('.biz-agg-toggle button').forEach(x=>x.classList.toggle('active', x===b));
+  });
+  bizSelected=null; bizHover=null;
+  bizRebuildGraph();
+}
+async function generateBizFlow(){
+  renderBizLoading();
+  try{
+    const r=await apiFetch('/api/structure/generate',{method:'POST',headers:authHeaders()});
+    if(r.status===401){ toast('セッションが切れました'); return logout(); }
+    const d=await r.json();
+    BIZFLOW = d.map || null;
+  }catch(e){ BIZFLOW=null; }
+  renderBizFlow();
+}
+async function showStructure(){
+  VIEW='structure'; setRail('structure');
+  SHEET.innerHTML = `<div class="view-full" id="bizWrap"></div>`;
+  renderBizLoading();
+  if(!bizLoaded) await loadBizFlow();
+  await loadAdminInsightsIfNeeded();
+  renderBizFlow();
+}
+
+/* ---------------- 分析(自分の質問傾向) ---------------- */
+async function showAnalysis(){
+  VIEW='analysis'; setRail('analysis');
+  SHEET.innerHTML = `<div class="view-full view-scroll"><div class="analysis-wrap" id="analysisWrap"><span class="loading"><i></i><i></i><i></i></span></div></div>`;
+  let stats=null, analysis=null;
+  try{
+    const sr=await apiFetch('/api/members/stats',{headers:authHeaders()});
+    if(sr.status===401){ toast('セッションが切れました'); return logout(); }
+    if(sr.ok){ const sd=await sr.json(); stats=(sd.members&&sd.members.find(m=>m.user_id===ME.id))||(sd.members&&sd.members[0])||null; }
+  }catch(e){}
+  try{
+    const ar=await apiFetch('/api/members/analysis',{headers:authHeaders()});
+    if(ar.ok){ const ad=await ar.json(); const ms=(ad.analysis&&ad.analysis.members)||[]; analysis=ms.find(m=>m.user_id===ME.id)||ms[0]||null; }
+  }catch(e){}
+  renderAnalysis(stats, analysis);
+}
+function renderAnalysis(stats, analysis){
+  const wrap=document.getElementById('analysisWrap');
+  if(!wrap) return;
+  const s=stats||{question_count:0,blocked_count:0,unanswered_count:0,top_doc_types:[]};
+  wrap.innerHTML = `
+    <div class="analysis-head fu-s" style="--d:0s">
+      <h2>${esc(ME.name)}さんの分析</h2>
+      <p>あなたの質問傾向の集計です。他のメンバーのデータは表示されません。</p>
+    </div>
+    <div class="analysis-stats fu-s" style="--d:.06s">
+      <div class="analysis-stat"><div class="k">質問数</div><div class="v" id="an_q">0</div></div>
+      <div class="analysis-stat"><div class="k">権限ブロック</div><div class="v" id="an_b">0</div></div>
+      <div class="analysis-stat"><div class="k">未回答（資料未該当）</div><div class="v" id="an_u">0</div></div>
+    </div>
+    <div class="analysis-doctypes fu-s" style="--d:.1s">${(s.top_doc_types&&s.top_doc_types.length)?s.top_doc_types.map(t=>`<span class="tag">${esc(t.doc_type)} ${t.count}</span>`).join(''):'<span class="tag">よく聞くテーマはまだありません</span>'}</div>
+    <div class="analysis-section-label fu-s" style="--d:.12s">AI定性分析</div>
+    ${analysis ? `
+    <div class="analysis-card fu-s" style="--d:.16s">
+      <div class="ac-role">${esc(analysis.inferred_role||'')}</div>
+      <div class="ac-summary">${esc(analysis.summary||'')}</div>
+      ${(analysis.gaps&&analysis.gaps.length)?`<div class="ac-sec"><span class="ac-sec-label">足りていないもの</span><ul>${analysis.gaps.map(g=>`<li>${esc(g)}</li>`).join('')}</ul></div>`:''}
+      ${(analysis.risks&&analysis.risks.length)?`<div class="ac-sec risk"><span class="ac-sec-label">リスク</span><ul>${analysis.risks.map(g=>`<li>${esc(g)}</li>`).join('')}</ul></div>`:''}
+      ${analysis.suggestion?`<div class="ac-suggestion">${esc(analysis.suggestion)}</div>`:''}
+    </div>` : `<div class="analysis-empty fu-s" style="--d:.16s">管理者がまだ分析を実行していません。</div>`}
+  `;
+  countUp(document.getElementById('an_q'), s.question_count);
+  countUp(document.getElementById('an_b'), s.blocked_count);
+  countUp(document.getElementById('an_u'), s.unanswered_count);
+}
+
+</script>
+<script>
+/* =====================================================================
+   管理コンソール(旧admin.htmlの移植)。レール「その他」から開く。
+   ダッシュボード / AI改善提案 / メンバー分析 / ユーザー・グループ / 文書 / 監査ログ
+   ===================================================================== */
+
+let GROUPS=[];
+let ADMIN_TAB='dash';
+let ADMIN_HL=null;          // AI改善提案でハイライトするfindingタイトル
+let _adminInterval=null;
+
+function ndDelay(i,step=0.055,cap=12){return `animation-delay:${(Math.min(i,cap)*step).toFixed(3)}s`}
+function ndDelayFrom(base,i,step=0.055,cap=12){return `animation-delay:${(base+Math.min(i,cap)*step).toFixed(3)}s`}
+function fmtWhen(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function animateCountUp(el,from,to,duration=800){
+  if(!el) return;
+  from=Number(from)||0; to=Number(to)||0;
+  if(from===to){el.textContent=to;return;}
+  const start=performance.now();
+  function step(now){
+    const p=Math.min((now-start)/duration,1);
+    const eased=1-Math.pow(1-p,3);
+    el.textContent=Math.round(from+(to-from)*eased);
+    if(p<1) requestAnimationFrame(step); else el.textContent=to;
+  }
+  requestAnimationFrame(step);
+}
+
+/* 管理API薄ラッパー: 401/403でログインへ */
+async function af(url,opts){
+  opts=Object.assign({},opts||{});
+  opts.headers=authHeaders(opts.headers||{});
+  const res=await apiFetch(url,opts);
+  if(res.status===401){
+    TOKEN=null; sessionStorage.removeItem('krag_token');
+    showLogin();
+    throw new Error('auth-required');
+  }
+  return res;
+}
+
+async function showAdmin(tab, highlight){
+  VIEW='admin'; setRail('admin');
+  if(_adminInterval){ clearInterval(_adminInterval); _adminInterval=null; }
+  if(!ME){ showLogin(); return; }
+  ADMIN_TAB=tab||ADMIN_TAB||'dash';
+  ADMIN_HL=highlight||null;
+  SHEET.innerHTML=`
+  <div class="view-full view-scroll admin-view">
+    <div class="admin-container">
+      <div class="admin-head fu-s" style="--d:0s">
+        <h1>管理コンソール</h1>
+        <span class="admin-org">${esc(ORG_NAME||'')} ／ ${esc(ME.name)}</span>
+      </div>
+      <nav class="atabs" id="atabs">
+        <button data-tab="dash">ダッシュボード</button>
+        <button data-tab="insights">AI改善提案</button>
+        <button data-tab="members">メンバー分析</button>
+        <button data-tab="users">ユーザー・グループ</button>
+        <button data-tab="docs">文書</button>
+        <button data-tab="log">監査ログ</button>
+      </nav>
+
+      <div class="tabpanel" id="tab-dash">
+        <div class="ov-row" id="ov-row"></div>
+        <div class="panel dash-trend-panel">
+          <div class="dash-trend-head">
+            <h3>組織全体の質問数推移（直近14日）</h3>
+            <div class="mem-trend-legend">
+              <span class="lg"><span class="sw" style="background:rgba(74,108,245,.30)"></span>回答済み</span>
+              <span class="lg"><span class="sw" style="background:rgba(74,108,245,.55)"></span>資料なし</span>
+              <span class="lg"><span class="sw" style="background:var(--danger)"></span>権限ブロック</span>
+            </div>
+          </div>
+          <div class="mem-trend-chart-wrap">
+            <div class="mem-trend-axis-top" id="dashTrendMaxLabel"></div>
+            <svg class="mem-trend-svg" id="dashTrendSvg" viewBox="0 0 880 220" preserveAspectRatio="none" role="img"></svg>
+            <div class="mem-trend-axis-bottom"><span id="dashTrendStartLabel"></span><span id="dashTrendEndLabel"></span></div>
+          </div>
+          <div class="dash-trend-caption" id="dashTrendCaption"></div>
+        </div>
+        <div class="dash-grid">
+          <div class="dash-panel">
+            <h3>よくある質問 TOP8</h3>
+            <div class="dh-sub">回数が多いほどFAQ化・研修教材の優先度が高い。</div>
+            <div id="topq"></div>
+          </div>
+          <div class="dash-panel">
+            <h3>ナレッジの穴（FAQ化候補）</h3>
+            <div class="dh-sub">参照できる資料が無かった質問。多い順＝優先度順。</div>
+            <div id="gapq"></div>
+          </div>
+        </div>
+        <div class="dash-grid">
+          <div class="dash-panel">
+            <h3>資料種別ごとの引用分布</h3>
+            <div class="dh-sub">どの領域のナレッジがよく参照されているか。</div>
+            <div id="doctypedist"></div>
+          </div>
+          <div class="dash-panel">
+            <h3>よく参照される資料 TOP</h3>
+            <div class="dh-sub">引用回数が多いほど組織の依存度が高い主力ナレッジ。</div>
+            <div id="topcited"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="tab-insights">
+        <div class="panel ins-panel" id="insights-body"></div>
+      </div>
+
+      <div class="tabpanel" id="tab-members">
+        <h2>定量ダッシュボード</h2>
+        <div class="panel mem-trend-panel">
+          <div class="mem-trend-head">
+            <h3>組織全体の質問数推移（直近14日）</h3>
+            <div class="mem-trend-legend">
+              <span class="lg"><span class="sw" style="background:rgba(74,108,245,.30)"></span>回答済み</span>
+              <span class="lg"><span class="sw" style="background:rgba(74,108,245,.55)"></span>資料なし</span>
+              <span class="lg"><span class="sw" style="background:var(--danger)"></span>権限ブロック</span>
+            </div>
+          </div>
+          <div class="mem-trend-chart-wrap">
+            <div class="mem-trend-axis-top" id="orgTrendMaxLabel"></div>
+            <svg class="mem-trend-svg" id="orgTrendSvg" viewBox="0 0 880 220" preserveAspectRatio="none" role="img"></svg>
+            <div class="mem-trend-axis-bottom"><span id="orgTrendStartLabel"></span><span id="orgTrendEndLabel"></span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="tablewrap"><table id="members-stats" class="mem-table"><thead><tr>
+            <th>氏名・役職</th><th>質問数</th><th>ブロック</th><th>未回答</th><th>よく引用される資料種別</th><th>推移（14日）</th><th>最終利用</th>
+          </tr></thead><tbody></tbody></table></div>
+        </div>
+        <h2>AI定性分析</h2>
+        <div class="panel ins-panel" id="members-analysis-body"></div>
+      </div>
+
+      <div class="tabpanel" id="tab-users">
+        <h2>ユーザー管理（閲覧者と所属グループ）</h2>
+        <div class="panel">
+          <div class="tablewrap"><table id="users"><thead><tr><th>氏名</th><th>役職</th><th>ログイン名</th><th>ロール</th><th>所属グループ</th><th class="row-actions">操作</th></tr></thead><tbody></tbody></table></div>
+          <div class="formbar" id="adduser"></div>
+        </div>
+        <p class="muted">所属グループを変えると、その人が見える文書（ACL可視性）が即変わります。</p>
+        <h2>グループ</h2>
+        <div class="panel">
+          <div id="grouplist" style="padding:14px 16px"></div>
+          <div class="formbar">
+            <label>グループID</label><input id="gid" placeholder="g_legal" style="width:130px">
+            <label>表示名</label><input id="glabel" placeholder="法務部" style="width:130px">
+            <button class="btn primary" id="addgroup">グループ追加</button>
+            <span class="err" id="gerr"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="tab-docs">
+        <h2>文書（ソース接続・アップロード取込）</h2>
+        <div class="panel">
+          <div class="tablewrap"><table id="docs"><thead><tr><th>文書名</th><th>ソース</th><th>閲覧権限(ACL)</th><th>チャンク</th><th class="row-actions">操作</th></tr></thead><tbody></tbody></table></div>
+          <div class="formbar" id="upload">
+            <label>ファイル</label><input type="file" id="up_file" accept=".txt,.md,.markdown,.csv,.pdf,.docx,.xlsx,.log,.json,.html,.htm">
+            <label>表示名(任意)</label><input id="up_title" placeholder="ファイル名を使用" style="width:140px">
+            <span style="font-size:13px;color:var(--text-2)">閲覧許可:</span><span id="up_groups"></span>
+            <button class="btn primary" id="up_btn">アップロードして索引</button>
+            <span class="err" id="up_err"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tabpanel" id="tab-log">
+        <h2>監査ログ（誰が・何を質問し・何を参照したか）</h2>
+        <div class="panel">
+          <div class="tablewrap"><table id="audit"><thead><tr><th>閲覧者</th><th>質問</th><th>参照した資料</th><th>可視文書</th><th>結果</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </div>
+      <div class="chart-tip" id="chartTip"></div>
+    </div>
+  </div>`;
+
+  document.querySelectorAll('#atabs button').forEach(b=>b.onclick=()=>activateAdminTab(b.dataset.tab));
+  document.getElementById('up_btn').onclick=uploadDoc;
+  document.getElementById('addgroup').onclick=addGroup;
+  activateAdminTab(ADMIN_TAB);
+
+  try{ await loadUsers(); }catch(e){ return; }
+  await Promise.all([loadAdminDocs(), loadAudit(), loadInsights(), loadMemberStats(), loadMemberAnalysis()]);
+  if(ADMIN_HL) applyInsightHighlight(ADMIN_HL);
+  _adminInterval=setInterval(()=>{ if(VIEW==='admin'){ loadAudit().catch(()=>{}); } else { clearInterval(_adminInterval); _adminInterval=null; } }, 8000);
+}
+
+function activateAdminTab(name){
+  ADMIN_TAB=name;
+  document.querySelectorAll('#atabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab===name));
+  document.querySelectorAll('.admin-view .tabpanel').forEach(p=>p.classList.toggle('on',p.id==='tab-'+name));
+}
+function applyInsightHighlight(hl){
+  activateAdminTab('insights');
+  setTimeout(()=>{
+    const titles=document.querySelectorAll('#insights-body .ins-title');
+    for(const elT of titles){
+      if(elT.textContent && elT.textContent.includes(hl)){
+        const row=elT.closest('.ins-row');
+        if(row){
+          row.scrollIntoView({behavior:'smooth',block:'center'});
+          row.classList.add('flash');
+          setTimeout(()=>row.classList.remove('flash'),1800);
+        }
+        break;
+      }
+    }
+  },300);
+}
+
+/* ---- 文書 ---- */
+async function loadAdminDocs(){
+  const s=await (await af('/api/admin/status')).json();
+  const tb=document.querySelector('#docs tbody');
+  if(!tb) return;
+  tb.innerHTML=s.documents.map((d,i)=>`
+    <tr data-id="${esc(d.id)}" class="nd-fade" style="${ndDelay(i)}">
+      <td>${esc(d.title)}</td><td class="src2">${esc(d.source)}</td>
+      <td class="acl">${d.acl_label?esc(d.acl_label):'<span class="blk">閲覧者なし</span>'}</td>
+      <td>${d.chunks}</td>
+      <td class="row-actions"><button class="btn" data-act="edit">権限編集</button> <button class="btn danger" data-act="del">削除</button></td>
+    </tr>`).join('');
+  document.querySelectorAll('#docs [data-act]').forEach(b=>b.onclick=()=>{
+    const tr=b.closest('tr'); const id=tr.dataset.id;
+    const d=s.documents.find(x=>x.id===id);
+    if(b.dataset.act==='del') return delDoc(id,d.title);
+    if(b.dataset.act==='edit') return editDoc(tr,d);
+  });
+  const up=document.getElementById('up_groups');
+  if(up) up.innerHTML=groupChecks('up',[]);
+}
+function editDoc(tr,d){
+  const cell=tr.querySelector('td:nth-child(3)');
+  cell.innerHTML=`<div class="editbox">
+    <input id="d_title" value="${esc(d.title)}" style="width:200px"><div style="margin-top:8px">${groupChecks('d',d.acl)}</div>
+    <div style="margin-top:8px"><button class="btn primary" id="d_save">保存</button> <button class="btn" id="d_cancel">取消</button><span class="err" id="d_err"></span></div>
+  </div>`;
+  document.getElementById('d_cancel').onclick=loadAdminDocs;
+  document.getElementById('d_save').onclick=async()=>{
+    const body={title:document.getElementById('d_title').value,acl:checkedGroups('d')};
+    const res=await af('/api/admin/documents/'+encodeURIComponent(d.id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(res.ok){loadAdminDocs();} else document.getElementById('d_err').textContent=(await res.json()).error||'エラー';
+  };
+}
+async function delDoc(id,title){
+  if(!confirm(`文書「${title}」を削除しますか？`)) return;
+  const res=await af('/api/admin/documents/'+encodeURIComponent(id),{method:'DELETE'});
+  if(res.ok){loadAdminDocs();}
+}
+async function uploadDoc(){
+  const f=document.getElementById('up_file').files[0];
+  const err=document.getElementById('up_err');
+  if(!f){err.textContent='ファイルを選んでください';return;}
+  const fd=new FormData();
+  fd.append('file',f);
+  fd.append('title',document.getElementById('up_title').value);
+  fd.append('acl',checkedGroups('up').join(','));
+  const btn=document.getElementById('up_btn'); btn.disabled=true; err.textContent='';
+  const res=await af('/api/admin/documents',{method:'POST',body:fd});
+  btn.disabled=false;
+  if(res.ok){
+    document.getElementById('up_file').value='';document.getElementById('up_title').value='';
+    toast('文書を索引しました');
+    loadAdminDocs();
+  } else err.textContent=(await res.json()).error||'アップロード失敗';
+}
+function groupChecks(prefix,selected){
+  return GROUPS.map(g=>`<label class="gchk"><input type="checkbox" data-g="${g.id}" id="${prefix}_${g.id}" ${selected.includes(g.id)?'checked':''}>${esc(g.label)}</label>`).join('');
+}
+function checkedGroups(prefix){
+  return GROUPS.filter(g=>document.getElementById(`${prefix}_${g.id}`)?.checked).map(g=>g.id);
+}
+
+/* ---- ユーザー・グループ ---- */
+async function loadUsers(){
+  const r=await (await af('/api/admin/users')).json();
+  GROUPS=r.groups;
+  document.querySelector('#users tbody').innerHTML=r.users.map((u,i)=>`
+    <tr data-id="${esc(u.id)}" class="nd-fade" style="${ndDelay(i)}">
+      <td>${esc(u.name)}</td><td class="src2">${esc(u.title)}</td>
+      <td class="src2">${u.username?esc(u.username):'<span class="blk">未設定</span>'}</td>
+      <td><span class="badge ${u.role==='admin'?'on':'off'}">${u.role==='admin'?'管理者':'一般'}</span></td>
+      <td>${u.group_labels.map(g=>`<span class="tag">${esc(g)}</span>`).join('')||'<span class="muted">なし</span>'}</td>
+      <td class="row-actions"><button class="btn" data-act="edit">編集</button> <button class="btn danger" data-act="del">削除</button></td>
+    </tr>`).join('');
+  document.getElementById('grouplist').innerHTML=
+    GROUPS.map(g=>`<span class="tag">${esc(g.label)} <span class="muted">(${esc(g.id)})</span></span>`).join(' ');
+  document.getElementById('adduser').innerHTML=`
+    <label>氏名</label><input id="nu_name" placeholder="高橋 法子" style="width:104px">
+    <label>役職</label><input id="nu_title" placeholder="法務部" style="width:90px">
+    <label>ログイン名</label><input id="nu_username" placeholder="takahashi" style="width:104px">
+    <label>初期PW</label><input id="nu_password" placeholder="パスワード" style="width:104px">
+    <label>ロール</label><select id="nu_role"><option value="member">一般</option><option value="admin">管理者</option></select>
+    <span id="nu_groups">${groupChecks('nu',[])}</span>
+    <button class="btn primary" id="nu_add">ユーザー追加</button><span class="err" id="nu_err"></span>`;
+  document.getElementById('nu_add').onclick=addUser;
+  document.querySelectorAll('#users [data-act]').forEach(b=>b.onclick=()=>{
+    const tr=b.closest('tr'); const id=tr.dataset.id;
+    if(b.dataset.act==='del') return delUser(id);
+    if(b.dataset.act==='edit') return editUser(tr,id,r.users.find(x=>x.id===id));
+  });
+}
+function editUser(tr,id,u){
+  const cell=tr.querySelector('td:nth-child(5)');
+  cell.innerHTML=`<div class="editbox">
+    <input id="e_name" value="${esc(u.name)}" placeholder="氏名" style="width:110px">
+    <input id="e_title" value="${esc(u.title)}" placeholder="役職" style="width:100px">
+    <div style="margin-top:8px">
+      <input id="e_username" value="${esc(u.username||'')}" placeholder="ログイン名" style="width:130px">
+      <input id="e_password" type="text" value="" placeholder="新パスワード（変更時のみ）" style="width:180px">
+      <select id="e_role"><option value="member" ${u.role!=='admin'?'selected':''}>一般</option><option value="admin" ${u.role==='admin'?'selected':''}>管理者</option></select>
+    </div>
+    <div style="margin-top:8px">${groupChecks('e',u.groups)}</div>
+    <div style="margin-top:8px"><button class="btn primary" id="e_save">保存</button> <button class="btn" id="e_cancel">取消</button><span class="err" id="e_err"></span></div>
+  </div>`;
+  document.getElementById('e_cancel').onclick=loadUsers;
+  document.getElementById('e_save').onclick=async()=>{
+    const body={name:document.getElementById('e_name').value,title:document.getElementById('e_title').value,
+      username:document.getElementById('e_username').value,role:document.getElementById('e_role').value,groups:checkedGroups('e')};
+    const pw=document.getElementById('e_password').value;
+    if(pw) body.password=pw;
+    const res=await af('/api/admin/users/'+encodeURIComponent(id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(res.ok) loadUsers(); else document.getElementById('e_err').textContent=(await res.json()).error||'エラー';
+  };
+}
+async function addUser(){
+  const username=document.getElementById('nu_username').value.trim();
+  if(!username){ document.getElementById('nu_err').textContent='ログイン名は必須です'; return; }
+  const body={name:document.getElementById('nu_name').value,
+    title:document.getElementById('nu_title').value,username,
+    password:document.getElementById('nu_password').value,role:document.getElementById('nu_role').value,groups:checkedGroups('nu')};
+  const res=await af('/api/admin/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(res.ok) loadUsers(); else document.getElementById('nu_err').textContent=(await res.json()).error||'エラー';
+}
+async function delUser(id){
+  if(!confirm(`ユーザー「${id}」を削除しますか？`)) return;
+  const res=await af('/api/admin/users/'+encodeURIComponent(id),{method:'DELETE'});
+  if(res.ok) loadUsers();
+}
+async function addGroup(){
+  const body={id:document.getElementById('gid').value,label:document.getElementById('glabel').value};
+  const res=await af('/api/admin/groups',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(res.ok){document.getElementById('gid').value='';document.getElementById('glabel').value='';loadUsers();}
+  else document.getElementById('gerr').textContent=(await res.json()).error||'エラー';
+}
+
+/* ---- 監査ログ + ダッシュボード ---- */
+let AUDIT_DATA=null;
+async function loadAudit(){
+  const a=await (await af('/api/admin/audit')).json();
+  AUDIT_DATA=a;
+  const tb=document.querySelector('#audit tbody');
+  if(!tb) return;
+  if(!a.log.length){tb.innerHTML='<tr><td colspan="5" class="muted">まだ質問がありません。チャット画面で質問するとここに記録されます。</td></tr>';}
+  else{
+    tb.innerHTML=a.log.map((l,i)=>{
+      const cited=l.blocked?'<span class="muted">なし</span>':(esc((l.cited||[]).join('、'))||'<span class="muted">なし</span>');
+      const res=l.blocked?'<span class="blk">権限ブロック</span>':'<span class="okq">回答</span>';
+      return `<tr class="nd-fade" style="${ndDelay(i)}"><td>${esc(l.user_name)}</td><td>${esc(l.query)}</td><td class="src2">${cited}</td><td>${l.visible_docs}/${l.total_docs}</td><td>${res}</td></tr>`;
+    }).join('');
+  }
+  renderDashboard(a);
+}
+let DASH_PREV={total:0,knowledge_gap:0};
+function pct(part,total){ return total>0 ? Math.round(part/total*100) : 0; }
+function interpretRecentWindow(rw){
+  if(!rw || !rw.n) return 'まだ質問が十分に蓄積されていません。';
+  const gapPct=pct(rw.gap,rw.n), blkPct=pct(rw.blocked,rw.n), ansPct=pct(rw.answered,rw.n);
+  if(rw.gap===0 && rw.blocked===0) return `直近${rw.n}問はすべて資料から回答できています。良好な状態です。`;
+  if(rw.gap>0 && gapPct>=blkPct) return `資料不足（${gapPct}%）が最大の要因です。「ナレッジの穴」の優先FAQ化を推奨します。`;
+  if(rw.blocked>0) return `権限による遮断が${blkPct}%あります。グループのACL設定を見直すと解決できる可能性があります。`;
+  return `回答到達率は${ansPct}%です。`;
+}
+function distributionInterpretation(dist,total){
+  if(!dist.length || !total) return 'まだ引用データがありません。';
+  const top=dist[0];
+  return `「${top.doc_type}」が引用全体の${pct(top.count,total)}%を占め、最も参照されている領域です。`;
+}
+function renderDashboard(a){
+  const ovRow=document.getElementById('ov-row');
+  if(!ovRow) return;
+  const s=a.stats||{total:0,answered:0,blocked:0,knowledge_gap:0,recent_window:{n:0,answered:0,blocked:0,gap:0}};
+  const rw=s.recent_window||{n:0,answered:0,blocked:0,gap:0};
+  const orgDaily=a.org_daily||[];
+  const recentSum=orgDaily.reduce((acc,d)=>acc+d.count,0);
+  const gapShare=pct(s.knowledge_gap,s.total);
+  ovRow.innerHTML=`
+    <div class="ov-tile nd-fade" style="${ndDelay(0)}">
+      <div class="ov-label">総質問数（全期間）</div>
+      <div class="ov-num" id="ov_total">0</div>
+      <div class="ov-note">うち直近14日間で${recentSum}件</div>
+    </div>
+    <div class="ov-tile ov-band nd-fade" style="${ndDelay(1)}">
+      <div class="ov-band-title">直近${rw.n||0}問の内訳</div>
+      <div class="ov-band-track">
+        <div class="ov-band-seg answered" id="ov_seg_ans" style="width:0%"></div>
+        <div class="ov-band-seg gapseg" id="ov_seg_gap" style="width:0%"></div>
+        <div class="ov-band-seg blockedseg" id="ov_seg_blk" style="width:0%"></div>
+      </div>
+      <div class="ov-band-legend">
+        <span class="lg"><span class="sw" style="background:var(--accent)"></span>回答到達 ${rw.answered}件（${pct(rw.answered,rw.n)}%）</span>
+        <span class="lg"><span class="sw" style="background:#f2b01e"></span>資料不足 ${rw.gap}件（${pct(rw.gap,rw.n)}%）</span>
+        <span class="lg"><span class="sw" style="background:var(--danger)"></span>権限ブロック ${rw.blocked}件（${pct(rw.blocked,rw.n)}%）</span>
+      </div>
+      <div class="ov-band-note">${esc(interpretRecentWindow(rw))}</div>
+    </div>
+    <div class="ov-tile nd-fade${s.knowledge_gap>0?' warn':''}" style="${ndDelay(2)}">
+      <div class="ov-label">ナレッジの穴（全期間）</div>
+      <div class="ov-num" id="ov_gap">0</div>
+      <div class="ov-note">${s.knowledge_gap>0?`全質問の${gapShare}%が資料不足で未回答`:'資料が網羅できています'}</div>
+    </div>`;
+  animateCountUp(document.getElementById('ov_total'),DASH_PREV.total,s.total);
+  animateCountUp(document.getElementById('ov_gap'),DASH_PREV.knowledge_gap,s.knowledge_gap);
+  DASH_PREV={total:s.total,knowledge_gap:s.knowledge_gap};
+  requestAnimationFrame(()=>{
+    const segAns=document.getElementById('ov_seg_ans'), segGap=document.getElementById('ov_seg_gap'), segBlk=document.getElementById('ov_seg_blk');
+    if(segAns) segAns.style.width=pct(rw.answered,rw.n)+'%';
+    if(segGap) segGap.style.width=pct(rw.gap,rw.n)+'%';
+    if(segBlk) segBlk.style.width=pct(rw.blocked,rw.n)+'%';
+  });
+  renderOrgTrend(orgDaily,{svg:'dashTrendSvg',maxLabel:'dashTrendMaxLabel',startLabel:'dashTrendStartLabel',endLabel:'dashTrendEndLabel',caption:'dashTrendCaption'});
+
+  const topq=document.getElementById('topq');
+  const topMax=(a.top_questions&&a.top_questions.length)?Math.max(...a.top_questions.map(q=>q.count)):0;
+  topq.innerHTML=(a.top_questions&&a.top_questions.length)
+    ? a.top_questions.map((q,i)=>{
+        const w=topMax>0?Math.round(q.count/topMax*100):0;
+        const op=Math.max(.32,1-i*.09).toFixed(2);
+        return `<div class="rank-row nd-fade" style="${ndDelayFrom(.22,i)}">
+          <div class="rank-num">${String(i+1).padStart(2,'0')}</div>
+          <div class="rank-main">
+            <div class="rank-top"><span class="rank-question">${esc(q.question)}</span><span class="rank-count">${q.count}件</span></div>
+            <div class="rank-bar-track"><div class="rank-bar-fill" data-w="${w}" style="width:0%;opacity:${op}"></div></div>
+            <div class="rank-meta">最後に聞いた人: ${esc(q.last_user||'?')} ・ ${fmtWhen(q.last_asked)}</div>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="empty-note">まだ質問がありません。</div>';
+  requestAnimationFrame(()=>{
+    topq.querySelectorAll('.rank-bar-fill').forEach(elm=>{ elm.style.width=(elm.dataset.w||0)+'%'; });
+  });
+
+  const gapBase=.22+Math.min((a.top_questions||[]).length,12)*.055+.12;
+  const gapq=document.getElementById('gapq');
+  gapq.innerHTML=(a.knowledge_gaps&&a.knowledge_gaps.length)
+    ? a.knowledge_gaps.map((q,i)=>`<div class="gap-card nd-fade" style="${ndDelayFrom(gapBase,i)}">
+        <div class="gap-badge">FAQ化候補</div>
+        <div class="gap-top"><span class="gap-question">${esc(q.question)}</span><span class="gap-count">${q.count}件</span></div>
+        <div class="gap-meta">最後に聞いた人: ${esc(q.last_user||'?')} ・ ${fmtWhen(q.last_asked)}</div>
+      </div>`).join('')
+    : `<div class="gap-empty nd-fade" style="${ndDelayFrom(gapBase,0)}">
+        <div class="gap-empty-mark"></div>
+        <div class="gap-empty-title">ナレッジの穴はありません</div>
+        <div class="gap-empty-sub">資料が網羅できています。</div>
+      </div>`;
+
+  const distWrap=document.getElementById('doctypedist');
+  const dist=a.doc_type_distribution||[];
+  if(!dist.length){
+    distWrap.innerHTML='<div class="empty-note">まだ引用データがありません。</div>';
+  }else{
+    const distTotal=dist.reduce((acc,d)=>acc+d.count,0);
+    const distMax=Math.max(...dist.map(d=>d.count));
+    distWrap.innerHTML=dist.map((d,i)=>{
+      const w=distMax>0?Math.round(d.count/distMax*100):0;
+      return `<div class="dist-row nd-fade" style="${ndDelayFrom(gapBase+.12,i)}">
+        <div class="dist-label">${esc(d.doc_type)}</div>
+        <div class="dist-bar-track"><div class="dist-bar-fill" data-w="${w}" style="width:0%"></div></div>
+        <div class="dist-count">${d.count}件・${pct(d.count,distTotal)}%</div>
+      </div>`;
+    }).join('') + `<div class="dist-note">${esc(distributionInterpretation(dist,distTotal))}</div>`;
+    requestAnimationFrame(()=>{
+      distWrap.querySelectorAll('.dist-bar-fill').forEach(elm=>{ elm.style.width=(elm.dataset.w||0)+'%'; });
+    });
+  }
+
+  const citedWrap=document.getElementById('topcited');
+  const cited=a.top_cited_docs||[];
+  const thin=a.thin_citation_count||0;
+  if(!cited.length){
+    citedWrap.innerHTML='<div class="empty-note">まだ引用データがありません。</div>';
+  }else{
+    citedWrap.innerHTML=cited.map((d,i)=>`<div class="cited-row nd-fade" style="${ndDelayFrom(gapBase+.12,i)}">
+        <div class="cited-num">${i+1}</div>
+        <div class="cited-main"><div class="cited-title">${esc(d.title)}</div><div class="cited-type">${esc(d.doc_type||'')}</div></div>
+        <div class="cited-count">${d.count}件</div>
+      </div>`).join('')
+      + (thin>0
+        ? `<div class="cited-note">引用が1件のみだった質問が${thin}件あります。将来の穴の予兆です。</div>`
+        : `<div class="cited-note">引用が薄い質問は現在ありません。</div>`);
+  }
+}
+
+/* ---- AI改善提案 ---- */
+let INSIGHTS_RUNNING=false;
+async function loadInsights(){
+  const r=await (await af('/api/admin/insights')).json();
+  renderInsights(r);
+}
+function renderInsights(r){
+  const wrap=document.getElementById('insights-body');
+  if(!wrap) return;
+  wrap.classList.add('ins-panel');
+  const report=r&&r.report;
+  if(!report){
+    wrap.innerHTML=`<div class="ins-empty">
+      <p class="muted">ナレッジDB全体を横断し、構造的な課題・重複・属人化・改善余地をAIが洗い出します。</p>
+      <button class="btn primary" id="ins_run">AIで分析する</button>
+    </div>`;
+    document.getElementById('ins_run').onclick=runInsights;
+    return;
+  }
+  const findings=report.findings||[];
+  wrap.innerHTML=`
+    <div class="ins-head">
+      <div class="ins-summary">${esc(report.summary||'')}</div>
+      <div class="ins-meta">
+        <span class="muted">生成日時: ${fmtWhen(r.created_at)}</span>
+        <button class="btn" id="ins_run">再分析する</button>
+      </div>
+    </div>
+    <div class="ins-list">
+      ${findings.map((f,i)=>`
+        <div class="ins-row ins-${esc(f.category)} nd-fade" style="${ndDelay(i)}">
+          <div class="ins-cat">${esc(INSIGHT_CATEGORY_LABELS[f.category]||f.category||'')}</div>
+          <div class="ins-body">
+            <div class="ins-title">${esc(f.title)}</div>
+            <div class="ins-detail">${esc(f.detail)}</div>
+            ${(f.evidence_titles&&f.evidence_titles.length)?`<div class="ins-evidence">${f.evidence_titles.map(t=>`<span class="tag">${esc(stripExt(t))}</span>`).join('')}</div>`:''}
+            <div class="ins-suggestion"><span class="ins-suggestion-label">改善アクション</span>${esc(f.suggestion)}</div>
+          </div>
+        </div>`).join('')||'<div class="empty-note" style="padding:0 32px 24px">指摘事項はありませんでした。</div>'}
+    </div>`;
+  document.getElementById('ins_run').onclick=runInsights;
+}
+async function runInsights(){
+  if(INSIGHTS_RUNNING) return;
+  INSIGHTS_RUNNING=true;
+  const btn=document.getElementById('ins_run');
+  const prevText=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.innerHTML='分析中<span class="nd-dots"><span></span><span></span><span></span></span>';}
+  try{
+    const res=await af('/api/admin/insights',{method:'POST'});
+    const r=await res.json().catch(()=>null);
+    if(res.ok&&r){ renderInsights(r); }
+    else{
+      toast((r&&r.error)||'分析に失敗しました');
+      if(btn){btn.disabled=false;btn.textContent=prevText;}
+    }
+  }catch(e){
+    toast('分析に失敗しました');
+    if(btn){btn.disabled=false;btn.textContent=prevText;}
+  }
+  INSIGHTS_RUNNING=false;
+}
+
+/* ---- メンバー分析 ---- */
+let MEMBER_STATS_PREV={};
+function fmtLastActive(iso){ return iso ? fmtWhen(iso) : '未利用'; }
+async function loadMemberStats(){
+  const r=await (await af('/api/members/stats')).json();
+  renderMemberStats(r.members||[]);
+  renderOrgTrend(r.org_daily||[]);
+}
+function renderMemberStats(members){
+  const tbody=document.querySelector('#members-stats tbody');
+  if(!tbody) return;
+  if(!members.length){
+    tbody.innerHTML='<tr><td colspan="7" class="muted">メンバーがいません。</td></tr>';
+    return;
+  }
+  tbody.innerHTML=members.map((m,i)=>`
+    <tr class="nd-fade" style="${ndDelay(i)}">
+      <td><div style="font-weight:600">${esc(m.name)}</div><div class="muted" style="font-size:12.5px">${esc(m.title)}</div></td>
+      <td class="num" id="ms_q_${esc(m.user_id)}">0</td>
+      <td class="num" id="ms_b_${esc(m.user_id)}">0</td>
+      <td class="num" id="ms_u_${esc(m.user_id)}">0</td>
+      <td><div class="mem-doctypes">${(m.top_doc_types||[]).map(t=>`<span class="tag">${esc(t.doc_type)} ${t.count}</span>`).join('')||'<span class="muted">なし</span>'}</div></td>
+      <td><div class="spark-wrap"><svg class="spark-svg" id="spark_${esc(m.user_id)}" viewBox="0 0 100 30" preserveAspectRatio="none" role="img"></svg></div></td>
+      <td class="src2">${esc(fmtLastActive(m.last_active))}</td>
+    </tr>`).join('');
+  members.forEach(m=>{
+    const prev=MEMBER_STATS_PREV[m.user_id]||{q:0,b:0,u:0};
+    animateCountUp(document.getElementById('ms_q_'+m.user_id), prev.q, m.question_count);
+    animateCountUp(document.getElementById('ms_b_'+m.user_id), prev.b, m.blocked_count);
+    animateCountUp(document.getElementById('ms_u_'+m.user_id), prev.u, m.unanswered_count);
+    MEMBER_STATS_PREV[m.user_id]={q:m.question_count,b:m.blocked_count,u:m.unanswered_count};
+    const svg=document.getElementById('spark_'+m.user_id);
+    if(svg) renderSparkline(svg, m.daily||[], m.name);
+  });
+}
+
+/* ---- 時系列チャート共通部品(自前SVG) ---- */
+function chartTipShow(clientX,clientY,html){
+  const t=document.getElementById('chartTip'); if(!t) return;
+  t.innerHTML=html;
+  t.classList.add('show');
+  const tx=Math.max(8, Math.min(clientX+14, window.innerWidth-232));
+  const ty=Math.max(8, clientY-40);
+  t.style.left=tx+'px'; t.style.top=ty+'px';
+}
+function chartTipHide(){ const t=document.getElementById('chartTip'); if(t) t.classList.remove('show'); }
+function niceAxisMax(maxVal){ return Math.max(4, Math.ceil(Math.max(maxVal,4)/4)*4); }
+function fmtShortDate(iso){ const d=new Date(iso+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}`; }
+function bandPath(lowerVals, upperVals, xFn, yFn, n){
+  let d='';
+  for(let i=0;i<n;i++) d+=(i===0?'M':'L')+xFn(i).toFixed(1)+','+yFn(upperVals[i]).toFixed(1)+' ';
+  for(let i=n-1;i>=0;i--) d+='L'+xFn(i).toFixed(1)+','+yFn(lowerVals[i]).toFixed(1)+' ';
+  return d+'Z';
+}
+function linePath(vals, xFn, yFn, n){
+  let d='';
+  for(let i=0;i<n;i++) d+=(i===0?'M':'L')+xFn(i).toFixed(1)+','+yFn(vals[i]).toFixed(1)+' ';
+  return d;
+}
+function animateStroke(path, duration){
+  if(!path) return;
+  try{
+    const len=path.getTotalLength();
+    path.style.strokeDasharray=len; path.style.strokeDashoffset=len;
+    requestAnimationFrame(()=>{
+      path.style.transition=`stroke-dashoffset ${duration||0.8}s ease`;
+      path.style.strokeDashoffset=0;
+    });
+  }catch(e){}
+}
+const ORG_TREND_DEFAULT_IDS={svg:'orgTrendSvg',maxLabel:'orgTrendMaxLabel',startLabel:'orgTrendStartLabel',endLabel:'orgTrendEndLabel',caption:null};
+function renderOrgTrend(orgDaily,ids){
+  ids=Object.assign({},ORG_TREND_DEFAULT_IDS,ids||{});
+  const svg=document.getElementById(ids.svg);
+  if(!svg) return;
+  if(!orgDaily || !orgDaily.length){ svg.innerHTML=''; return; }
+  const W=880,H=220,padL=8,padR=8,padT=10,padB=10;
+  const innerW=W-padL-padR, innerH=H-padT-padB;
+  const n=orgDaily.length;
+  const answered=orgDaily.map(d=>Math.max(0,d.count-d.blocked-d.gap));
+  const gap=orgDaily.map(d=>d.gap);
+  const blocked=orgDaily.map(d=>d.blocked);
+  const cum0=orgDaily.map(()=>0);
+  const cum1=answered.slice();
+  const cum2=answered.map((v,i)=>v+gap[i]);
+  const cum3=answered.map((v,i)=>v+gap[i]+blocked[i]);
+  const axisMax=niceAxisMax(Math.max(...cum3,0));
+  const x=i=> padL + (n>1 ? i/(n-1)*innerW : innerW/2);
+  const y=v=> padT + innerH - (v/axisMax)*innerH;
+  const gridYs=[0.25,0.5,0.75].map(f=>padT+innerH*(1-f));
+  const gridHtml=gridYs.map(gy=>`<line class="gridline" x1="${padL}" x2="${W-padR}" y1="${gy.toFixed(1)}" y2="${gy.toFixed(1)}"/>`).join('');
+  const hoverW=innerW/n;
+  const hoverHtml=orgDaily.map((d,i)=>{
+    const cx=padL+i*hoverW;
+    return `<rect class="hoverrect" data-i="${i}" x="${cx.toFixed(1)}" y="${padT}" width="${hoverW.toFixed(1)}" height="${innerH.toFixed(1)}"/>`;
+  }).join('');
+  svg.innerHTML=`
+    ${gridHtml}
+    <path class="band" fill="rgba(74,108,245,.30)" d="${bandPath(cum0,cum1,x,y,n)}"/>
+    <path class="band" fill="rgba(74,108,245,.55)" d="${bandPath(cum1,cum2,x,y,n)}"/>
+    <path class="band" fill="var(--danger)" fill-opacity="0.45" d="${bandPath(cum2,cum3,x,y,n)}"/>
+    <path class="topline" id="${ids.svg}_top" d="${linePath(cum3,x,y,n)}"/>
+    ${hoverHtml}`;
+  const maxLabelEl=document.getElementById(ids.maxLabel);
+  const startLabelEl=document.getElementById(ids.startLabel);
+  const endLabelEl=document.getElementById(ids.endLabel);
+  if(maxLabelEl) maxLabelEl.textContent=`最大 ${axisMax}件/日`;
+  if(startLabelEl) startLabelEl.textContent=fmtShortDate(orgDaily[0].date);
+  if(endLabelEl) endLabelEl.textContent=fmtShortDate(orgDaily[n-1].date);
+  const topId=ids.svg+'_top';
+  requestAnimationFrame(()=>{
+    svg.querySelectorAll('.band').forEach(b=>b.classList.add('show'));
+    animateStroke(document.getElementById(topId));
+  });
+  svg.querySelectorAll('.hoverrect').forEach(r=>{
+    r.addEventListener('mousemove',ev=>{
+      const i=Number(r.dataset.i);
+      const d=orgDaily[i];
+      chartTipShow(ev.clientX, ev.clientY,
+        `<b>${esc(fmtShortDate(d.date))}</b>合計 ${d.count}件（回答済み ${answered[i]} ／ 資料なし ${d.gap} ／ ブロック ${d.blocked}）`);
+    });
+    r.addEventListener('mouseleave', chartTipHide);
+  });
+  if(ids.caption){
+    const capEl=document.getElementById(ids.caption);
+    if(capEl){
+      const sum=orgDaily.reduce((a2,d)=>a2+d.count,0);
+      if(!sum){
+        capEl.textContent='直近14日間はまだ質問がありません。';
+      }else{
+        let peak=orgDaily[0];
+        for(const d of orgDaily) if(d.count>peak.count) peak=d;
+        capEl.textContent=`直近14日間の合計は${sum}件。最も質問が多かったのは${fmtShortDate(peak.date)}（${peak.count}件）。`;
+      }
+    }
+  }
+}
+function renderSparkline(svg, daily, name){
+  if(!daily || !daily.length){ svg.innerHTML=''; return; }
+  const W=100,H=30,pad=3;
+  const n=daily.length;
+  const vals=daily.map(d=>d.count);
+  const max=Math.max(...vals,1);
+  const x=i=> pad + (n>1 ? i/(n-1)*(W-2*pad) : (W-2*pad)/2);
+  const y=v=> H-pad - (v/max)*(H-2*pad);
+  const d=linePath(vals,x,y,n);
+  const lastX=x(n-1), lastY=y(vals[n-1]);
+  svg.innerHTML=`<path class="spark-line" id="${svg.id}_line" d="${d}"/><circle class="spark-dot" cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="2.2"/>`;
+  requestAnimationFrame(()=>animateStroke(document.getElementById(svg.id+'_line')));
+  svg.addEventListener('mousemove',ev=>{
+    const rect=svg.getBoundingClientRect();
+    const relX=(ev.clientX-rect.left)/rect.width*W;
+    let i=Math.round((relX-pad)/(W-2*pad)*(n-1));
+    i=Math.max(0,Math.min(n-1,i));
+    const dd=daily[i];
+    chartTipShow(ev.clientX, ev.clientY, `<b>${esc(fmtShortDate(dd.date))}</b>${esc(name)}：${dd.count}件（ブロック${dd.blocked}）`);
+  });
+  svg.addEventListener('mouseleave', chartTipHide);
+}
+
+/* ---- メンバーAI定性分析 ---- */
+let MEMBER_ANALYSIS_RUNNING=false;
+async function loadMemberAnalysis(){
+  const r=await (await af('/api/members/analysis')).json();
+  renderMemberAnalysis(r);
+}
+function renderMemberAnalysis(r){
+  const wrap=document.getElementById('members-analysis-body');
+  if(!wrap) return;
+  wrap.classList.add('ins-panel');
+  const a=r&&r.analysis;
+  const members=(a&&a.members)||[];
+  if(!members.length){
+    wrap.innerHTML=`<div class="ins-empty">
+      <p class="muted">メンバーごとの質問傾向から、役割・関心領域・情報ギャップをAIが推定します。</p>
+      <button class="btn primary" id="mem_run">AIで分析する</button>
+    </div>`;
+    document.getElementById('mem_run').onclick=runMemberAnalysis;
+    return;
+  }
+  wrap.innerHTML=`
+    <div class="ins-head">
+      <div class="ins-summary">${esc(a.org_note||'')}</div>
+      <div class="ins-meta">
+        <span class="muted">生成日時: ${fmtWhen(r.created_at)}</span>
+        <button class="btn" id="mem_run" style="white-space:nowrap">再分析する</button>
+      </div>
+    </div>
+    <div class="mem-cards">
+      ${members.map((m,i)=>`
+        <div class="mem-card nd-fade" style="${ndDelay(i)}">
+          <div class="mc-name">${esc(m.name||'')}</div>
+          <div class="mc-role">${esc(m.inferred_role||'')}</div>
+          <div class="mc-summary">${esc(m.summary||'')}</div>
+          ${(m.gaps&&m.gaps.length)?`<div class="mc-sec"><span class="mc-sec-label">足りていないもの</span><ul>${m.gaps.map(g=>`<li>${esc(g)}</li>`).join('')}</ul></div>`:''}
+          ${(m.risks&&m.risks.length)?`<div class="mc-sec risk"><span class="mc-sec-label">リスク</span><ul>${m.risks.map(g=>`<li>${esc(g)}</li>`).join('')}</ul></div>`:''}
+          ${m.suggestion?`<div class="mc-suggestion"><span class="ins-suggestion-label">管理者への提案</span>${esc(m.suggestion)}</div>`:''}
+        </div>`).join('')}
+    </div>`;
+  document.getElementById('mem_run').onclick=runMemberAnalysis;
+}
+async function runMemberAnalysis(){
+  if(MEMBER_ANALYSIS_RUNNING) return;
+  MEMBER_ANALYSIS_RUNNING=true;
+  const btn=document.getElementById('mem_run');
+  const prevText=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.innerHTML='分析中<span class="nd-dots"><span></span><span></span><span></span></span>';}
+  try{
+    const res=await af('/api/members/analyze',{method:'POST'});
+    const r=await res.json().catch(()=>null);
+    if(res.ok&&r){ renderMemberAnalysis(r); }
+    else{
+      toast((r&&r.error)||'分析に失敗しました');
+      if(btn){btn.disabled=false;btn.textContent=prevText;}
+    }
+  }catch(e){
+    toast('分析に失敗しました');
+    if(btn){btn.disabled=false;btn.textContent=prevText;}
+  }
+  MEMBER_ANALYSIS_RUNNING=false;
+}
+
+</script>
 <script>init();</script>
 </body>
 </html>
