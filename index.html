@@ -74,11 +74,17 @@
   .rav-initial{font-size:19px;font-weight:700;color:var(--bg-blue)}
 
   .col{flex:1;min-width:0;display:flex;flex-direction:column}
-  .titlebar{height:46px;flex:0 0 46px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;color:#fff}
-  .wbtn{width:44px;height:40px;display:grid;place-items:center;color:#fff;opacity:.95;border-radius:8px}
-  .wbtn:hover{background:rgba(255,255,255,.16)}
-  .wbtn.close:hover{background:#e5484d}
-  .wbtn svg{width:16px;height:16px}
+  /* 上部バー = ウェブアプリのヘッダー(ウィンドウ操作ボタンは廃止し、ブランドと状態を表示) */
+  .titlebar{height:46px;flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;color:#fff}
+  .tb-brand{display:flex;align-items:center;gap:9px;min-width:0}
+  .tb-logo{width:24px;height:24px;border-radius:7px;background:rgba(255,255,255,.18);display:grid;place-items:center;flex:none}
+  .tb-logo svg{width:15px;height:15px}
+  .tb-name{font-size:13.5px;font-weight:700;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb-tag{font-size:11px;font-weight:600;opacity:.72;border-left:1px solid rgba(255,255,255,.4);padding-left:9px;white-space:nowrap}
+  .tb-right{display:flex;align-items:center;gap:10px;flex:none}
+  .tb-user{font-size:12.5px;font-weight:600;color:#fff;display:flex;align-items:center;gap:7px}
+  .tb-user .tb-dot{width:7px;height:7px;border-radius:50%;background:#7ee2a8;flex:none}
+  .tb-badge{font-size:11px;font-weight:600;color:#fff;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);border-radius:7px;padding:3px 10px}
   .sheet{flex:1;min-height:0;background:var(--card);border-radius:26px 0 0 0;display:flex;overflow:hidden}
   .view-full{flex:1;min-width:0;min-height:0}
   .view-scroll{overflow-y:auto}
@@ -678,9 +684,12 @@
   <!-- 右カラム: 青タイトルバー + 白シート(左上のみ角丸) -->
   <div class="col">
     <div class="titlebar">
-      <button class="wbtn" title="最小化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg></button>
-      <button class="wbtn" title="最大化"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="4.5" width="12" height="12" rx="1.5"/><path d="M5 8.5v9A1.5 1.5 0 0 0 6.5 19h9"/></svg></button>
-      <button class="wbtn close" title="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <div class="tb-brand">
+        <span class="tb-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-11.8 7.7L3 21l1.9-5.7A8.4 8.4 0 1 1 21 11.5z"/></svg></span>
+        <span class="tb-name">社内ナレッジ集約AI</span>
+        <span class="tb-tag">nerdech</span>
+      </div>
+      <div class="tb-right" id="tbRight"></div>
     </div>
     <div class="sheet" id="sheet"></div>
   </div>
