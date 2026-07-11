@@ -314,6 +314,22 @@
   .flt .flabel{font-size:13px;font-weight:600;color:var(--text)}
   .flt .fsub{font-size:11px;color:var(--text-3);line-height:1.6}
   .flt .fcount{margin-left:auto;font-size:12px;color:var(--text-3)}
+  /* 階層(段)の管理UI: 追加ボタン・行内のリネーム/削除 */
+  .mgr-h3-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .tier-add{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent-lav);border-radius:7px;padding:3px 9px;letter-spacing:0;white-space:nowrap;transition:.12s}
+  .tier-add:hover{background:var(--accent);color:#fff}
+  .flt.tier-flt{align-items:center}
+  .flt.tier-flt .flabel-wrap{flex:1;min-width:0}
+  .flt.tier-flt .fcount{margin-left:0}
+  .tier-acts{display:flex;gap:2px;opacity:0;transition:opacity .12s}
+  .flt.tier-flt:hover .tier-acts,.flt.tier-flt:focus-within .tier-acts{opacity:1}
+  .tier-btn{width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:var(--text-3);font-size:12px;line-height:1}
+  .tier-btn:hover{background:var(--hover);color:var(--text)}
+  .tier-btn[data-act="del"]:hover{background:var(--danger-soft);color:var(--danger)}
+  .insp-move{display:flex;align-items:center;gap:8px;margin:2px 0 10px}
+  .insp-move label{font-size:11px;font-weight:700;color:var(--text-3);letter-spacing:.04em}
+  .insp-move select{flex:1;border:1px solid var(--line-2);border-radius:8px;padding:6px 9px;font-size:12.5px;background:#fff;color:var(--text)}
+  .insp-move select:focus{outline:none;border-color:#b9c6f5}
   .mgr-toggle{display:flex;gap:2px;background:var(--panel-2);border-radius:10px;padding:3px;margin-bottom:16px}
   .mgr-toggle button{flex:1;font-size:12.5px;font-weight:600;color:var(--text-2);padding:7px 0;border-radius:8px;transition:.12s;white-space:nowrap}
   .mgr-toggle button.active{background:#fff;color:var(--accent);box-shadow:0 1px 3px rgba(20,30,60,.12)}
@@ -1302,16 +1318,28 @@ function resetPerUserState(){
   SESSIONS=[]; CURRENT_SESSION=null; CHAT_MODE='ai';
 }
 
-/* ---------------- 引用元プレビュー(原本モーダル) ---------------- */
-const TIER_DEF={
-  core:{id:0,label:'コア / 最重要',sub:'上段',desc:'請求書・見積書・契約書・案件情報。'},
-  deliverable:{id:1,label:'成果物',sub:'中段',desc:'作成したファイル。デザイン・ソース・納品物。'},
-  reference:{id:2,label:'参考 / 履歴',sub:'下段',desc:'やりとり・議事録・参考資料など。'},
-};
-const TIER_BY_ID=['core','deliverable','reference'];
-function tierOf(imp){ return TIER_DEF[imp] ? imp : 'reference'; }
+/* ---------------- 階層(段 / 重要度レイヤー) ----------------
+   ファイルマネージャーのケーキ図の「段」。ユーザーが任意に追加/削除/リネームできる。
+   TIERS が唯一の真実で、TIER_DEF / TIER_BY_ID はそこから毎回再構築する派生ビュー。
+   ・TIER_DEF[id] = {id:<数値index>, key:<文字列id>, label, sub, desc}
+   ・TIER_BY_ID[index] = <文字列id>  (index 0 = 最上段) */
+let TIERS=[
+  {id:'core',        label:'コア / 最重要', sub:'上段', desc:'請求書・見積書・契約書・案件情報。'},
+  {id:'deliverable', label:'成果物',        sub:'中段', desc:'作成したファイル。デザイン・ソース・納品物。'},
+  {id:'reference',   label:'参考 / 履歴',   sub:'下段', desc:'やりとり・議事録・参考資料など。'},
+];
+let TIER_DEF={}, TIER_BY_ID=[];
+function rebuildTierMaps(){
+  TIER_DEF={}; TIER_BY_ID=[];
+  TIERS.forEach((t,i)=>{
+    TIER_DEF[t.id]={id:i, key:t.id, label:t.label, sub:t.sub||'', desc:t.desc||''};
+    TIER_BY_ID[i]=t.id;
+  });
+}
+rebuildTierMaps();
+function tierOf(imp){ return TIER_DEF[imp] ? imp : (TIER_BY_ID[TIER_BY_ID.length-1]||'reference'); }
 function tierNumOf(d){ return TIER_DEF[tierOf(d.importance)].id; }
-function dpImportanceLabel(imp){ return (TIER_DEF[tierOf(imp)]||TIER_DEF.reference).label; }
+function dpImportanceLabel(imp){ const t=TIER_DEF[tierOf(imp)]; return t?t.label:''; }
 
 function openDocPreview(docId){
   docId=(docId||'').toString().trim();
@@ -2064,7 +2092,7 @@ document.addEventListener('click',e=>{
 /* ---------------- マネージャー(ナレッジの見取り図) ---------------- */
 let DOCS=[];
 let MGR_AGG=false;
-let MGR_TIERS=new Set(['core','deliverable','reference']);
+let MGR_TIERS=new Set(TIER_BY_ID);   // 表示中の階層(段)。TIERSと同期して更新する
 let ALL_TYPES=[];
 let MGR_TYPES=null;
 const TYPE_PALETTE=['#4a6cf5','#e8703a','#f2b01e','#22a06b','#0a9ea4','#a24bd8','#e5484d','#ec4899','#5b8def','#8a90a0'];
@@ -2090,24 +2118,33 @@ function visibleDocs(){
   return DOCS.filter(d=>MGR_TIERS.has(tierOf(d.importance)) && MGR_TYPES.has(d.doc_type||'一般'));
 }
 
-/* === data cake 3D投影エンジン === */
+/* === data cake 3D投影エンジン(段数Nは動的) === */
 const APEX={x:300,y:650};
 const RHO0=100, RHO1=520;
 const THETA0=0, THETA1=90;
 const SX=1.10, DEPTH_X=0, DEPTH_Y=0.50;
 const SLAB_T=66;
 const LAYER_H=Math.ceil(RHO1*DEPTH_Y+SLAB_T)+24;
-const LAYER_SCALE=[1.0,0.80,0.62];
-const layerFactor=pos=>0.72+0.28*LAYER_SCALE[pos];
+// 段数Nに応じて各段の縮尺を動的に決める(pos0=最下段=最大, 上に行くほど小さく=奥行き)
+function tierCount(){ return Math.max(1, TIER_BY_ID.length); }
+function tierScale(pos){ const n=tierCount(); return n>1 ? 1.0-(pos/(n-1))*0.46 : 1.0; }
+const layerFactor=pos=>0.72+0.28*tierScale(pos);
+// 色を灰へ混ぜる(古い記録の退色表現に使う)
+function mixHex(a,b,t){
+  const pa=[1,3,5].map(i=>parseInt(a.slice(i,i+2),16));
+  const pb=[1,3,5].map(i=>parseInt(b.slice(i,i+2),16));
+  const c=pa.map((v,i)=>Math.round(v+(pb[i]-v)*t).toString(16).padStart(2,'0'));
+  return '#'+c.join('');
+}
 let azimuth=0;
 const AZ_MIN=-1.5, AZ_MAX=1.5;
 function proj(rho, thetaDeg, pos){
   const ca=Math.cos(azimuth), sa=Math.sin(azimuth);
-  const r=rho*LAYER_SCALE[pos];
+  const r=rho*tierScale(pos);
   const a=thetaDeg*Math.PI/180;
   const fx=r*Math.sin(a), fy=r*Math.cos(a);
   const gx=fx*ca-fy*sa, gy=fx*sa+fy*ca;
-  const br=RHO1*LAYER_SCALE[pos], ba=Math.PI/4;
+  const br=RHO1*tierScale(pos), ba=Math.PI/4;
   const bfx=br*Math.sin(ba), bfy=br*Math.cos(ba);
   const bgx=bfx*ca-bfy*sa, bgy=bfx*sa+bfy*ca;
   const offX=-(bgx*SX+bgy*DEPTH_X);
@@ -2127,18 +2164,19 @@ function computeGraph(){
   const tMax=times.length?Math.max(...times):0, tMin=times.length?Math.min(...times):0, tRange=(tMax-tMin)||1;
   NODES={};
   const lo=THETA0+8, hi=THETA1-8;
-  [0,1,2].forEach(tier=>{
+  const N=tierCount();
+  for(let tier=0;tier<N;tier++){
     const fs=docs.filter(d=>tierNumOf(d)===tier);
     const m=fs.length;
     fs.forEach((d,k)=>{
       const theta = m>1 ? lo+(k/(m-1))*(hi-lo) : (lo+hi)/2;
-      const pos=2-tier;
-      const age=(tMax-(+new Date(d.updated_at)))/tRange;
+      const pos=(N-1)-tier;
+      const age=(tMax-(+new Date(d.updated_at)))/tRange; // 0=最新, 1=最古
       const rho=RHO0+age*(RHO1-RHO0)+(k%2?7:-7);
       const [x,y]=proj(rho,theta,pos);
-      NODES[d.id]={doc:d, tier, pos, theta, rho, x, y};
+      NODES[d.id]={doc:d, tier, pos, theta, rho, x, y, age};
     });
-  });
+  }
 }
 
 let VB={x:0,y:0,s:900};
@@ -2147,23 +2185,29 @@ function buildGraph(){
   if(!svgEl) return;
   svgEl.innerHTML='';
   const g=el('g',{}); svgEl.appendChild(g);
-  const slabTopFill=['#ffffff','#fbfcfe','#f6f9fc'];
-  const slabSideFill=['#dde4ec','#dde4ec','#dde4ec'];
-  for(let pos=0;pos<3;pos++){
+  const N=tierCount();
+  // ガラス板の天面/側面(段が増えても淡く積層して見えるようHSLで生成)
+  const topFill=pos=>`hsl(222,42%,${Math.max(92,99-pos*1.4).toFixed(0)}%)`;
+  const sideFill='#dde4ec';
+  for(let pos=0;pos<N;pos++){
     const far=sampleArc(RHO1,THETA0,THETA1,pos,30);
     const near=sampleArc(RHO0,THETA1,THETA0,pos,16);
     const top=far.concat(near);
     const frontLine=[proj(RHO1,THETA1,pos)].concat(sampleArc(RHO0,THETA1,THETA0,pos,16)).concat([proj(RHO1,THETA0,pos)]);
     const frontDown=frontLine.map(p=>[p[0],p[1]+SLAB_T]).reverse();
     const gs=el('g',{});
-    gs.appendChild(el('path',{d:ptsToPath(frontLine.concat(frontDown),true), fill:slabSideFill[pos], stroke:'#c3ccd8','stroke-width':'1.4','stroke-linejoin':'round'}));
-    gs.appendChild(el('path',{d:ptsToPath(top,true), fill:slabTopFill[pos], stroke:'#c3ccd8','stroke-width':'1.4','stroke-linejoin':'round'}));
+    gs.appendChild(el('path',{d:ptsToPath(frontLine.concat(frontDown),true), fill:sideFill, stroke:'#c3ccd8','stroke-width':'1.4','stroke-linejoin':'round'}));
+    gs.appendChild(el('path',{d:ptsToPath(top,true), fill:topFill(pos), stroke:'#c3ccd8','stroke-width':'1.4','stroke-linejoin':'round'}));
+    // ガラスの縁ハイライト(内側の白ストローク)
+    gs.appendChild(el('path',{d:ptsToPath(top,true), fill:'none', stroke:'rgba(255,255,255,.55)','stroke-width':'1'}));
     g.appendChild(gs);
     const [lx,ly]=proj(RHO1,THETA0,pos);
-    const t=TIER_DEF[TIER_BY_ID[2-pos]];
-    const t1=el('text',{x:lx-14,y:ly-2,'text-anchor':'end','font-size':'16','font-weight':'700',fill:'#2a3340'}); t1.textContent=t.label;
-    const t2=el('text',{x:lx-14,y:ly+15,'text-anchor':'end','font-size':'11','font-weight':'500',fill:'#9aa4b1'}); t2.textContent=t.sub;
-    g.appendChild(t1); g.appendChild(t2);
+    const t=TIER_DEF[TIER_BY_ID[(N-1)-pos]];
+    if(t){
+      const t1=el('text',{x:lx-14,y:ly-2,'text-anchor':'end','font-size':'16','font-weight':'700',fill:'#2a3340'}); t1.textContent=t.label;
+      g.appendChild(t1);
+      if(t.sub){ const t2=el('text',{x:lx-14,y:ly+15,'text-anchor':'end','font-size':'11','font-weight':'500',fill:'#9aa4b1'}); t2.textContent=t.sub; g.appendChild(t2); }
+    }
   }
   const [ax,ay]=proj(0,0,0);
   const [ox,oy]=proj(RHO1,45,0);
@@ -2177,10 +2221,14 @@ function buildGraph(){
   } else {
     const gN=el('g',{id:'cakeNodes'});
     Object.values(NODES).sort((m,n)=>(m.pos-n.pos)||(n.rho-m.rho)).forEach(nd=>{
-      const col=typeColor(nd.doc.doc_type||'一般');
-      const c=el('circle',{cx:nd.x,cy:nd.y,r:nodeR(nd),fill:col,stroke:'#ffffff','stroke-width':'2.4',tabindex:'0',role:'button'});
+      // 古い記録ほど退色: 色を灰へ寄せ、不透明度も下げる(figure仕様の「新しいほど鮮明」)
+      const age=nd.age||0;
+      const col=mixHex(typeColor(nd.doc.doc_type||'一般'), '#9aa4b1', age*0.55);
+      const op=(1-age*0.5).toFixed(2);
+      const c=el('circle',{cx:nd.x,cy:nd.y,r:nodeR(nd),fill:col,'fill-opacity':op,stroke:'#ffffff','stroke-width':'2.4',tabindex:'0',role:'button'});
       c.style.cursor='pointer';
       c.dataset.id=nd.doc.id;
+      c.dataset.op=op;
       c.setAttribute('aria-label',`${nd.doc.title}｜${nd.doc.doc_type||'一般'}｜${TIER_DEF[tierOf(nd.doc.importance)].label}`);
       const ttl=el('title',{}); ttl.textContent=`${nd.doc.title} — ${nd.doc.doc_type||'一般'} / ${TIER_DEF[tierOf(nd.doc.importance)].label}`; c.appendChild(ttl);
       const enter=()=>{ if(!cakeSelected){ cakeHover=nd.doc.id; cakeRender(); } };
@@ -2215,12 +2263,13 @@ function buildClusters(g){
     const key=nd.tier+'|'+(nd.doc.doc_type||'一般');
     (groups[key]=groups[key]||{tier:nd.tier,kind:nd.doc.doc_type||'一般',nodes:[]}).nodes.push(nd);
   });
-  const byTier={0:[],1:[],2:[]};
-  Object.values(groups).forEach(grp=>byTier[grp.tier].push(grp));
+  const N=tierCount();
+  const byTier={}; for(let i=0;i<N;i++) byTier[i]=[];
+  Object.values(groups).forEach(grp=>{ if(byTier[grp.tier]) byTier[grp.tier].push(grp); });
   const gC=el('g',{});
-  [0,1,2].forEach(tier=>{
+  for(let tier=0;tier<N;tier++){
     const arr=byTier[tier];
-    const m=arr.length, lo=THETA0+12, hi=THETA1-12, pos=2-tier;
+    const m=arr.length, lo=THETA0+12, hi=THETA1-12, pos=(N-1)-tier;
     arr.forEach((grp,i)=>{
       const theta=m>1?lo+(i/(m-1))*(hi-lo):(lo+hi)/2;
       const rho=grp.nodes.reduce((s,n)=>s+n.rho,0)/grp.nodes.length;
@@ -2237,11 +2286,12 @@ function buildClusters(g){
       t.setAttribute('font-size', cnt>=100?13:15); t.textContent=cnt;
       gC.appendChild(t);
     });
-  });
+  }
   g.appendChild(gC);
 }
 function tipCluster(ev,grp,cnt){
-  document.getElementById('cakeTip').innerHTML=`<b>${esc(grp.kind)} × ${esc(TIER_DEF[TIER_BY_ID[grp.tier]].label)}</b><span>${cnt}件</span>`;
+  const tt=TIER_DEF[TIER_BY_ID[grp.tier]];
+  document.getElementById('cakeTip').innerHTML=`<b>${esc(grp.kind)} × ${esc(tt?tt.label:'')}</b><span>${cnt}件</span>`;
   document.getElementById('cakeTip').classList.add('show'); moveTip(ev);
 }
 
@@ -2253,10 +2303,11 @@ function cakeRender(){
   document.querySelectorAll('#cakeNodes circle').forEach(c=>{
     const nd=NODES[c.dataset.id]; if(!nd) return;
     const baseR=nodeR(nd);
+    const baseOp=c.dataset.op||1; // 時間退色の基準不透明度
     if(active){
       if(String(c.dataset.id)===String(active)){ c.setAttribute('r',baseR+4); c.setAttribute('fill-opacity',1); c.setAttribute('stroke-width','3'); }
-      else { c.setAttribute('r',baseR); c.setAttribute('fill-opacity',0.15); c.setAttribute('stroke-width','2.4'); }
-    } else { c.setAttribute('r',baseR); c.setAttribute('fill-opacity',1); c.setAttribute('stroke-width','2.4'); }
+      else { c.setAttribute('r',baseR); c.setAttribute('fill-opacity',0.12); c.setAttribute('stroke-width','2.4'); }
+    } else { c.setAttribute('r',baseR); c.setAttribute('fill-opacity',baseOp); c.setAttribute('stroke-width','2.4'); }
   });
   const fx=document.getElementById('cakeFx');
   if(fx){
@@ -2284,6 +2335,7 @@ function renderCakeInspector(){
   const active=cakeSelected;
   if(!active || !NODES[active]){ ins.classList.remove('show'); return; }
   const nd=NODES[active], d=nd.doc, tier=TIER_DEF[tierOf(d.importance)], col=typeColor(d.doc_type||'一般');
+  const curTier=tierOf(d.importance);
   ins.innerHTML=`
     <button class="insp-close" aria-label="閉じる">×</button>
     <div class="insp-head">
@@ -2292,7 +2344,7 @@ function renderCakeInspector(){
       </div>
       <div style="min-width:0">
         <div class="insp-name">${esc(stripExt(d.title))}</div>
-        <div class="insp-crumb"><span class="d" style="background:${col}"></span>${esc(d.doc_type||'一般')} <i>·</i> ${esc(tier.label)}／${esc(tier.sub)}</div>
+        <div class="insp-crumb"><span class="d" style="background:${col}"></span>${esc(d.doc_type||'一般')} <i>·</i> ${esc(tier?tier.label:'')}${tier&&tier.sub?'／'+esc(tier.sub):''}</div>
       </div>
     </div>
     <div class="insp-meta">
@@ -2300,10 +2352,16 @@ function renderCakeInspector(){
       <span class="mtag">${esc(dateLabel(d.updated_at))}</span>
       <span class="mtag">${esc(fmtSize(d.size_bytes))}</span>
     </div>
+    <div class="insp-move">
+      <label>階層</label>
+      <select id="inspTierSel">${TIERS.map(t=>`<option value="${esc(t.id)}" ${t.id===curTier?'selected':''}>${esc(t.label)}</option>`).join('')}</select>
+    </div>
     ${d.summary?`<p class="insp-sec">要約</p><p style="font-size:13.5px;color:#5b6270;line-height:1.7">${esc(d.summary)}</p>`:''}
     <button class="biz-preview-btn" style="margin-top:12px" data-id="${esc(d.id)}">${ICON.doc} 原本を見る</button>`;
   ins.querySelector('.insp-close').addEventListener('click',()=>{ cakeSelected=null; cakeHover=null; hideTip(); cakeRender(); });
   ins.querySelector('.biz-preview-btn').addEventListener('click',()=>openDocPreview(d.id));
+  const sel=ins.querySelector('#inspTierSel');
+  if(sel) sel.addEventListener('change',()=>docSetTier(d.id, sel.value)); // 選択中の資料を別階層へ移動
   ins.classList.add('show');
 }
 function tipFill(nd){ document.getElementById('cakeTip').innerHTML=`<b>${esc(stripExt(nd.doc.title))}</b><span>${esc(nd.doc.doc_type||'一般')} · ${esc(TIER_DEF[tierOf(nd.doc.importance)].label)} · ${esc(dateLabel(nd.doc.updated_at))}</span>`; }
@@ -2326,11 +2384,18 @@ function scheduleCakeRotate(){
 function renderCake(){ computeGraph(); buildGraph(); cakeRender(); }
 
 function renderMgrFilters(){
-  const tiers=[['core','上段','コア / 最重要'],['deliverable','中段','成果物'],['reference','下段','参考 / 履歴']];
-  document.getElementById('fTier').innerHTML = tiers.map(([k,label,sub])=>{
-    const count=DOCS.filter(d=>tierOf(d.importance)===k).length;
-    return `<label class="flt"><input type="checkbox" data-tier="${k}" ${MGR_TIERS.has(k)?'checked':''}>
-      <span style="flex:1"><span class="flabel">${label}</span><div class="fsub">${sub}</div></span><span class="fcount">${count}</span></label>`;
+  // 段(階層)は TIERS から動的生成。各行に名前変更(✎)と削除(✕)、末尾に追加ボタン。
+  document.getElementById('fTier').innerHTML = TIERS.map(t=>{
+    const count=DOCS.filter(d=>tierOf(d.importance)===t.id).length;
+    return `<div class="flt tier-flt">
+      <input type="checkbox" data-tier="${esc(t.id)}" ${MGR_TIERS.has(t.id)?'checked':''}>
+      <span class="flabel-wrap"><span class="flabel">${esc(t.label)}</span>${t.sub?`<div class="fsub">${esc(t.sub)}</div>`:''}</span>
+      <span class="fcount">${count}</span>
+      <span class="tier-acts">
+        <button class="tier-btn" data-act="rename" data-id="${esc(t.id)}" title="名前を変更">✎</button>
+        <button class="tier-btn" data-act="del" data-id="${esc(t.id)}" title="この階層を削除">✕</button>
+      </span>
+    </div>`;
   }).join('');
   const types=[...ALL_TYPES].sort();
   document.getElementById('fType').innerHTML = types.map(t=>{
@@ -2339,14 +2404,62 @@ function renderMgrFilters(){
       <span class="fdot" style="background:${typeColor(t)}"></span>
       <span class="flabel" style="flex:1">${esc(t)}</span><span class="fcount">${count}</span></label>`;
   }).join('');
-  document.querySelectorAll('#fTier input').forEach(cb=>cb.onchange=()=>{
+  document.querySelectorAll('#fTier input[type=checkbox]').forEach(cb=>cb.onchange=()=>{
     if(cb.checked) MGR_TIERS.add(cb.dataset.tier); else MGR_TIERS.delete(cb.dataset.tier);
     renderCake();renderTimeline();
+  });
+  document.querySelectorAll('#fTier .tier-btn').forEach(b=>b.onclick=e=>{
+    e.preventDefault(); e.stopPropagation();
+    if(b.dataset.act==='rename') tierRename(b.dataset.id);
+    else if(b.dataset.act==='del') tierDelete(b.dataset.id);
   });
   document.querySelectorAll('#fType input').forEach(cb=>cb.onchange=()=>{
     if(cb.checked) MGR_TYPES.add(cb.dataset.type); else MGR_TYPES.delete(cb.dataset.type);
     renderCake();renderTimeline();
   });
+  const addBtn=document.getElementById('tierAddBtn');
+  if(addBtn) addBtn.onclick=tierAdd;
+}
+
+/* ---- 階層(段)の追加・リネーム・削除・資料の移動 ---- */
+function tierAdd(){
+  const label=(prompt('追加する階層の名前（例：アーカイブ）','')||'').trim();
+  if(!label) return;
+  const id='tier_'+Date.now();
+  TIERS.push({id,label,sub:''});   // 末尾(最下段)に追加
+  rebuildTierMaps(); MGR_TIERS.add(id);
+  renderMgrFilters(); renderCake(); renderTimeline();
+  toast('階層「'+label+'」を追加しました');
+}
+function tierRename(id){
+  const t=TIERS.find(x=>x.id===id); if(!t) return;
+  const label=(prompt('階層名を変更',t.label)||'').trim();
+  if(!label) return;
+  t.label=label; rebuildTierMaps();
+  renderMgrFilters(); renderCake(); renderTimeline();
+}
+function tierDelete(id){
+  if(TIERS.length<=1){ toast('階層は最低1つ必要です'); return; }
+  const idx=TIERS.findIndex(x=>x.id===id); if(idx<0) return;
+  const t=TIERS[idx];
+  const targetId = (TIERS[idx-1]||TIERS[idx+1]).id;
+  const targetLabel = TIER_DEF[targetId] ? TIER_DEF[targetId].label : '';
+  if(!confirm(`階層「${t.label}」を削除します。\n含まれる資料は「${targetLabel}」へ移動します。よろしいですか？`)) return;
+  // この階層に属する資料を隣の階層へ付け替え(ローカル + デモの元データ両方)
+  DOCS.forEach(d=>{ if(tierOf(d.importance)===id) d.importance=targetId; });
+  if(typeof DEMO_DOCS!=='undefined') DEMO_DOCS.forEach(d=>{ if(d.importance===id || tierOf(d.importance)===id) d.importance=targetId; });
+  TIERS.splice(idx,1);
+  MGR_TIERS.delete(id); MGR_TIERS.add(targetId);
+  rebuildTierMaps();
+  cakeSelected=null; cakeHover=null; hideTip();
+  renderMgrFilters(); renderCake(); renderTimeline();
+  toast('階層「'+t.label+'」を削除しました');
+}
+function docSetTier(docId, tierId){
+  const d=DOCS.find(x=>x.id===docId); if(d) d.importance=tierId;
+  if(typeof DEMO_DOCS!=='undefined'){ const dd=DEMO_DOCS.find(x=>x.id===docId); if(dd) dd.importance=tierId; }
+  MGR_TIERS.add(tierId);
+  renderMgrFilters(); renderCake(); renderTimeline();
 }
 function renderTimeline(){
   const docs=visibleDocs();
@@ -2383,7 +2496,7 @@ function mgrCakeAsideHtml(){
       <button data-agg="0" class="${MGR_AGG?'':'active'}">個別</button>
       <button data-agg="1" class="${MGR_AGG?'active':''}">集約</button>
     </div>
-    <h3>段 / 重要度</h3>
+    <h3 class="mgr-h3-row">段 / 重要度<button class="tier-add" id="tierAddBtn" title="階層を追加">＋ 階層</button></h3>
     <div id="fTier"></div>
     <h3 style="margin-top:20px">色 / 種類</h3>
     <div id="fType"></div>`;
