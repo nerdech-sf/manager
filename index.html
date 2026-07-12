@@ -452,6 +452,35 @@
   .biz-hint{position:absolute;right:14px;bottom:12px;font-size:10.5px;color:rgba(235,240,255,.4);pointer-events:none;user-select:none}
   .biz-detail{border-left:1px solid var(--line);padding:22px;overflow:auto}
   .biz-detail h3{font-size:11.5px;color:var(--text-3);font-weight:700;margin:0 0 14px;letter-spacing:.08em}
+
+  /* ===== 業務フロー: タブ付きカードを矢印でつなぐ白背景フローチャート ===== */
+  .bizflow-scroll{flex:1;min-height:0;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:16px}
+  /* 折り返しグリッド: 全カードが一画面に収まるよう自動で行を折り返し、蛇行フローで繋ぐ。
+     align-items:start でカードを引き伸ばさず自然な高さにし、余白をなくす */
+  .bizflow{position:relative;display:grid;gap:30px 40px;justify-content:center;align-content:center;align-items:start;
+    width:100%;min-height:100%;padding:22px 28px;box-sizing:border-box}
+  .bizflow-edges{position:absolute;left:0;top:0;pointer-events:none;z-index:0;overflow:visible}
+  .flowcard{width:178px;background:#fff;border:1px solid var(--line-2);border-radius:13px;box-shadow:0 3px 12px rgba(20,30,60,.06);
+    cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;position:relative;z-index:1}
+  .flowcard:hover{border-color:#b9c6f5;box-shadow:0 8px 26px rgba(74,108,245,.12);transform:translateY(-2px)}
+  .flowcard.sel{border-color:var(--accent);box-shadow:0 0 0 3px rgba(74,108,245,.14),0 8px 26px rgba(74,108,245,.14)}
+  .flowcard-tabs{display:flex;gap:4px;padding:7px 12px 0}
+  .flowcard-tabs span{width:17px;height:6px;border-radius:4px 4px 0 0;background:var(--panel-2);border:1px solid var(--line);border-bottom:none}
+  .flowcard-head{display:flex;align-items:center;gap:7px;padding:6px 12px 7px;border-bottom:1px solid var(--line)}
+  .flowcard-name{font-size:13.5px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .flowcard-badge{font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:6px;white-space:nowrap;flex:none;background:var(--panel);color:var(--text-3);border:1px solid var(--line-2)}
+  .flowcard-badge.ok{color:#1f9d55;background:#f0faf4;border-color:#bfe6cf}
+  .flowcard-badge.thin{color:#a07a10;background:var(--cream);border-color:var(--cream-b)}
+  .flowcard-badge.gap{color:var(--danger);background:var(--danger-soft);border-color:#f2c9c5}
+  .flowcard.health-gap{border-color:#f2c9c5}
+  .flowcard.health-gap .flowcard-head{border-bottom-color:#f2c9c5}
+  .flowcard-docs{padding:6px 6px 7px;display:flex;flex-direction:column;gap:1px;max-height:132px;overflow:auto}
+  .flowcard-doc{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:7px;font-size:12px;color:var(--text-2);cursor:pointer}
+  .flowcard-doc:hover{background:var(--hover);color:var(--accent)}
+  .flowcard-doc svg{width:14px;height:14px;flex:none;color:var(--text-3)}
+  .flowcard-doc:hover svg{color:var(--accent)}
+  .flowcard-doc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .flowcard-empty{font-size:12px;color:var(--text-3);padding:8px 10px}
   .biz-note{margin:2px 0 16px;font-size:12.5px;line-height:1.85;color:var(--danger);background:var(--danger-soft);border:1px solid #f2c9c5;border-radius:11px;padding:11px 13px}
   .biz-note.thin{color:#a07a10;background:var(--cream);border-color:var(--cream-b)}
   .biz-preview-btn{margin-top:16px;background:#fff;border:1px solid var(--line-2);color:var(--text-2);border-radius:10px;padding:9px 15px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:.15s}
@@ -738,6 +767,7 @@ function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"f
 /* =====================================================================
    デモモード: バックエンド(/api/*)が見つからない時に、この内蔵データで
    全機能を動かすモックAPI。実バックエンドがあればそちらが優先される。
+   ※ 登場する人物・会社・資料はすべて架空のものです。
    ===================================================================== */
 
 const DEMO_GROUPS = [
@@ -749,10 +779,10 @@ const DEMO_GROUPS = [
 ];
 
 const DEMO_USERS = [
-  {id:'u_kido',     name:'木戸 隆正',  title:'代表・PM',       username:'kido',     password:'demo', role:'admin',  groups:['g_all','g_exec','g_sales','g_dev','g_hr']},
-  {id:'u_fukuda',   name:'福田 晟樹',  title:'開発エンジニア', username:'fukuda',   password:'demo', role:'member', groups:['g_all','g_dev']},
-  {id:'u_matsuura', name:'松浦 正醐',  title:'開発エンジニア', username:'matsuura', password:'demo', role:'member', groups:['g_all','g_dev']},
-  {id:'u_ninomiya', name:'二宮 石太郎',title:'営業',           username:'ninomiya', password:'demo', role:'member', groups:['g_all','g_sales']},
+  {id:'u_kido',     name:'山田 太郎',  title:'代表・PM',       username:'yamada',    password:'demo', role:'admin',  groups:['g_all','g_exec','g_sales','g_dev','g_hr']},
+  {id:'u_fukuda',   name:'鈴木 健一',  title:'開発エンジニア', username:'suzuki',    password:'demo', role:'member', groups:['g_all','g_dev']},
+  {id:'u_matsuura', name:'小林 美咲',  title:'開発エンジニア', username:'kobayashi', password:'demo', role:'member', groups:['g_all','g_dev']},
+  {id:'u_ninomiya', name:'中村 亮',    title:'営業',           username:'nakamura',  password:'demo', role:'member', groups:['g_all','g_sales']},
 ];
 
 function demoDaysAgo(n, h, m){
@@ -764,27 +794,27 @@ function demoDaysAgo(n, h, m){
 
 let DEMO_DOCS = [
   {id:'d01', title:'就業規則.pdf',                       doc_type:'規程',   importance:'core',        acl:['g_all'],            source:'ローカル取込', chunks:14, size_bytes:482000, updated_at:demoDaysAgo(48),
-    summary:'勤務時間・休日・服務規律などの基本規則。', content:'第1章 総則\n本規則は合同会社nerdechの従業員の就業条件を定める。\n勤務時間は9:30〜18:30（休憩1時間）。完全週休二日制（土日祝）。\n時間外勤務は事前申請制とする。'},
+    summary:'勤務時間・休日・服務規律などの基本規則。', content:'第1章 総則\n本規則は合同会社スカイテックの従業員の就業条件を定める。\n勤務時間は9:30〜18:30（休憩1時間）。完全週休二日制（土日祝）。\n時間外勤務は事前申請制とする。'},
   {id:'d02', title:'給与規程.docx',                      doc_type:'規程',   importance:'core',        acl:['g_hr','g_exec'],    source:'Google Drive', chunks:9,  size_bytes:88000,  updated_at:demoDaysAgo(41),
     summary:'給与の締め日・支払日・各種手当の定め。', content:'給与の締め日は毎月末日とし、支払日は翌月25日（休日の場合は前営業日）に指定口座へ振り込む。\n通勤手当は月上限2万円。昇給は年1回（4月）。'},
   {id:'d03', title:'経費精算マニュアル.md',               doc_type:'規程',   importance:'reference',   acl:['g_all'],            source:'ローカル取込', chunks:5,  size_bytes:12000,  updated_at:demoDaysAgo(30),
     summary:'経費精算の申請方法と締切。', content:'経費は発生月の月末までに精算フォームで申請する。領収書の写真添付が必須。\n承認後、翌月の給与と合わせて振り込まれる。交通費はICカード履歴で代用可。'},
   {id:'d04', title:'顧客名簿.xlsx',                      doc_type:'営業',   importance:'core',        acl:['g_sales','g_exec'], source:'Google Drive', chunks:7,  size_bytes:64000,  updated_at:demoDaysAgo(6),
-    summary:'取引先の担当者・連絡先一覧。', content:'ケアとーカー（担当:斎藤様）、クロノス（担当:田中様）、千歳開発（担当:佐藤様）ほか計12社の担当者・連絡先・取引状況を管理。'},
+    summary:'取引先の担当者・連絡先一覧。', content:'みどり介護サービス（担当:井上様）、オルカ広告（担当:森様）、ひなた工務店（担当:大山様）ほか計12社の担当者・連絡先・取引状況を管理。'},
   {id:'d05', title:'単価表_2026.xlsx',                   doc_type:'経理',   importance:'core',        acl:['g_exec'],           source:'Google Drive', chunks:4,  size_bytes:31000,  updated_at:demoDaysAgo(20),
     summary:'開発・保守の標準単価表。', content:'受託開発の標準単価: エンジニア 80万円/人月。保守運用: 月額8万円〜。デザイン: 60万円/人月。値引きは代表承認が必要。'},
-  {id:'d06', title:'見積書_ケアとーカー.pdf',             doc_type:'経理',   importance:'core',        acl:['g_sales','g_exec'], source:'ローカル取込', chunks:3,  size_bytes:210000, updated_at:demoDaysAgo(12),
-    summary:'ケアとーカー案件の見積書。', content:'ケアとーカー様 御見積書\n初期開発費: 180万円（要件定義・設計・実装・テスト一式）\n月額保守: 8万円\n納期: 契約から3ヶ月。'},
-  {id:'d07', title:'請求書_クロノス案件.pdf',             doc_type:'経理',   importance:'core',        acl:['g_exec'],           source:'ローカル取込', chunks:2,  size_bytes:150000, updated_at:demoDaysAgo(3),
-    summary:'クロノス案件 2026年6月分の請求書。', content:'クロノス様 御請求書（2026年6月分）\nLP制作・保守費用: 24万円（税別）\n振込期限: 2026年7月末日。'},
+  {id:'d06', title:'見積書_みどり介護.pdf',               doc_type:'経理',   importance:'core',        acl:['g_sales','g_exec'], source:'ローカル取込', chunks:3,  size_bytes:210000, updated_at:demoDaysAgo(12),
+    summary:'みどり介護サービス案件の見積書。', content:'みどり介護サービス様 御見積書\n初期開発費: 180万円（要件定義・設計・実装・テスト一式）\n月額保守: 8万円\n納期: 契約から3ヶ月。'},
+  {id:'d07', title:'請求書_オルカ広告案件.pdf',           doc_type:'経理',   importance:'core',        acl:['g_exec'],           source:'ローカル取込', chunks:2,  size_bytes:150000, updated_at:demoDaysAgo(3),
+    summary:'オルカ広告案件 2026年6月分の請求書。', content:'オルカ広告様 御請求書（2026年6月分）\nLP制作・保守費用: 24万円（税別）\n振込期限: 2026年7月末日。'},
   {id:'d08', title:'業務委託契約書_雛形.docx',            doc_type:'契約',   importance:'core',        acl:['g_exec','g_sales'], source:'Google Drive', chunks:11, size_bytes:97000,  updated_at:demoDaysAgo(60),
     summary:'受託案件で使う業務委託契約書のテンプレート。', content:'業務委託契約書（雛形）\n第1条（目的）乙は甲に対しソフトウェア開発業務を委託する。\n検収期間は納品後10営業日。知的財産権は検収完了時に甲へ移転。'},
-  {id:'d09', title:'提案書_ケアとーカー.pptx',            doc_type:'営業',   importance:'deliverable', acl:['g_sales','g_exec'], source:'ローカル取込', chunks:8,  size_bytes:56000,  updated_at:demoDaysAgo(14),
-    summary:'介護事業者向けシフト管理アプリの提案書。', content:'ケアとーカー様向け提案書。介護現場のシフト作成を自動化し、月20時間の管理業務を削減する提案。導入スケジュールと費用対効果を記載。'},
+  {id:'d09', title:'提案書_みどり介護.pptx',              doc_type:'営業',   importance:'deliverable', acl:['g_sales','g_exec'], source:'ローカル取込', chunks:8,  size_bytes:56000,  updated_at:demoDaysAgo(14),
+    summary:'介護事業者向けシフト管理アプリの提案書。', content:'みどり介護サービス様向け提案書。介護現場のシフト作成を自動化し、月20時間の管理業務を削減する提案。導入スケジュールと費用対効果を記載。'},
   {id:'d10', title:'要件定義書_社内ナレッジAI_v0.2.docx', doc_type:'開発',   importance:'core',        acl:['g_dev','g_exec'],   source:'ローカル取込', chunks:22, size_bytes:38700,  updated_at:demoDaysAgo(11),
     summary:'社内ナレッジ集約AIプラットフォームのMVP要件定義書。', content:'業務特化エージェント/権限継承RAG/セルフサーブ型。権限の壁: 質問者が閲覧権限を持つ資料のみから回答を生成する。F-01〜F-12の機能要件を定義。'},
   {id:'d11', title:'MVP開発タスク一覧.md',                doc_type:'開発',   importance:'deliverable', acl:['g_dev'],            source:'ローカル取込', chunks:4,  size_bytes:9000,   updated_at:demoDaysAgo(1),
-    summary:'MVPの残タスクと担当割り。', content:'MVP残タスク:\n- F-04 差分同期のWebhook対応（松浦）\n- F-05 権限フィルタのテナント境界テスト（福田）\n- F-06 引用元リンクのUI仕上げ（福田）\n- DM/グループチャットUI（木戸レビュー待ち）'},
+    summary:'MVPの残タスクと担当割り。', content:'MVP残タスク:\n- F-04 差分同期のWebhook対応（小林）\n- F-05 権限フィルタのテナント境界テスト（鈴木）\n- F-06 引用元リンクのUI仕上げ（鈴木）\n- DM/グループチャットUI（山田レビュー待ち）'},
   {id:'d12', title:'API設計メモ.md',                     doc_type:'開発',   importance:'deliverable', acl:['g_dev'],            source:'ローカル取込', chunks:6,  size_bytes:15000,  updated_at:demoDaysAgo(4),
     summary:'ナレッジAIのAPIエンドポイント設計。', content:'POST /api/ask/stream: SSEで回答をストリーミング。meta→delta→doneの順にイベントを流す。\n全クエリにテナント境界とACLフィルタを強制する。'},
   {id:'d13', title:'議事録_2026-06-30_定例.md',           doc_type:'議事録', importance:'reference',   acl:['g_all'],            source:'ローカル取込', chunks:3,  size_bytes:7000,   updated_at:demoDaysAgo(11),
@@ -807,7 +837,7 @@ const DEMO_TEMPLATES_COMMON = [
   {label:'経費精算の締切は？',      query:'経費精算の締切はいつですか？'},
 ];
 const DEMO_TEMPLATES_BY_GROUP = {
-  g_sales:[{label:'ケアとーカーの見積金額は？', query:'ケアとーカー案件の見積金額はいくらですか？'}],
+  g_sales:[{label:'みどり介護の見積金額は？', query:'みどり介護案件の見積金額はいくらですか？'}],
   g_dev:  [{label:'MVPの残タスクは？',          query:'MVPの残タスクを教えて'}],
   g_exec: [{label:'開発の標準単価は？',          query:'受託開発の標準単価はいくら？'}],
 };
@@ -818,15 +848,15 @@ const DEMO_QA = [
   {keys:['給与'],              docIds:['d02'], answer:'給与規程によると、締め日は毎月末日・支払日は翌月25日です。通勤手当は月上限2万円、昇給は年1回（4月）です。'},
   {keys:['有給'],              docIds:['d15'], answer:'有給休暇は、取得希望日の3営業日前までに申請フォームから申請します。承認者は直属の上長で、半休（午前/午後）も取得できます。'},
   {keys:['経費'],              docIds:['d03'], answer:'経費は発生月の月末までに精算フォームで申請してください。領収書の写真添付が必須です。承認後、翌月の給与と合わせて振り込まれます。'},
-  {keys:['見積','ケアとーカー'],docIds:['d06','d09'], answer:'ケアとーカー案件の見積は、初期開発費180万円（要件定義〜テスト一式）＋月額保守8万円です。納期は契約から3ヶ月とされています。'},
+  {keys:['見積','みどり介護'], docIds:['d06','d09'], answer:'みどり介護案件の見積は、初期開発費180万円（要件定義〜テスト一式）＋月額保守8万円です。納期は契約から3ヶ月とされています。'},
   {keys:['単価'],              docIds:['d05'], answer:'受託開発の標準単価はエンジニア80万円/人月、デザイン60万円/人月です。保守運用は月額8万円〜。値引きには代表承認が必要です。'},
-  {keys:['残タスク'],          docIds:['d11'], answer:'MVPの残タスクは次の4件です。\n・F-04 差分同期のWebhook対応（松浦）\n・F-05 権限フィルタのテナント境界テスト（福田）\n・F-06 引用元リンクのUI仕上げ（福田）\n・DM/グループチャットUI（木戸レビュー待ち）'},
+  {keys:['残タスク'],          docIds:['d11'], answer:'MVPの残タスクは次の4件です。\n・F-04 差分同期のWebhook対応（小林）\n・F-05 権限フィルタのテナント境界テスト（鈴木）\n・F-06 引用元リンクのUI仕上げ（鈴木）\n・DM/グループチャットUI（山田レビュー待ち）'},
   {keys:['MVP','タスク'],      docIds:['d11'], answer:'MVPの残タスクは、F-04 差分同期のWebhook対応、F-05 権限フィルタのテスト、F-06 引用元リンクのUI仕上げ、DM/グループチャットUIのレビューです。'},
-  {keys:['請求','クロノス'],   docIds:['d07'], answer:'クロノス案件の2026年6月分請求は、LP制作・保守費用24万円（税別）、振込期限は2026年7月末日です。'},
+  {keys:['請求','オルカ広告'], docIds:['d07'], answer:'オルカ広告案件の2026年6月分請求は、LP制作・保守費用24万円（税別）、振込期限は2026年7月末日です。'},
   {keys:['契約','検収'],       docIds:['d08'], answer:'業務委託契約書の雛形では、検収期間は納品後10営業日、知的財産権は検収完了時に発注者へ移転すると定めています。'},
   {keys:['勤務','時間'],       docIds:['d01'], answer:'勤務時間は9:30〜18:30（休憩1時間）です。完全週休二日制（土日祝）で、時間外勤務は事前申請制です。'},
   {keys:['障害'],              docIds:['d17'], answer:'障害発生時は、まず影響範囲を特定し30分以内に顧客へ一次報告します。復旧後に恒久対応と再発防止策をまとめて報告します。'},
-  {keys:['顧客','担当'],       docIds:['d04'], answer:'顧客名簿には、ケアとーカー（斎藤様）、クロノス（田中様）、千歳開発（佐藤様）ほか計12社の担当者・連絡先が登録されています。'},
+  {keys:['顧客','担当'],       docIds:['d04'], answer:'顧客名簿には、みどり介護サービス（井上様）、オルカ広告（森様）、ひなた工務店（大山様）ほか計12社の担当者・連絡先が登録されています。'},
 ];
 
 /* ---- 業務構造(AI推定の業務フロー) ---- */
@@ -837,7 +867,7 @@ const DEMO_STRUCTURE = {
       description:'新規の相談・引き合いを受け付ける工程。', note:'問い合わせの記録が雛形1件のみ。実際のやりとりの記録が残っていません。'},
     {id:'s2', name:'ヒアリング', health:'ok', doc_ids:['d18','d13'], doc_titles:['ヒアリングシート_雛形.docx','議事録_2026-06-30_定例.md'],
       description:'課題・予算・納期・意思決定者を確認する工程。'},
-    {id:'s3', name:'見積', health:'ok', doc_ids:['d05','d06'], doc_titles:['単価表_2026.xlsx','見積書_ケアとーカー.pdf'],
+    {id:'s3', name:'見積', health:'ok', doc_ids:['d05','d06'], doc_titles:['単価表_2026.xlsx','見積書_みどり介護.pdf'],
       description:'単価表をもとに見積書を作成・提示する工程。'},
     {id:'s4', name:'契約', health:'thin', doc_ids:['d08'], doc_titles:['業務委託契約書_雛形.docx'],
       description:'契約書を締結する工程。', note:'雛形のみで、締結済み契約書の控えがナレッジに入っていません。'},
@@ -845,7 +875,7 @@ const DEMO_STRUCTURE = {
       description:'要件定義・設計・実装を行う工程。'},
     {id:'s6', name:'検収', health:'gap', doc_ids:[], doc_titles:[],
       description:'納品物を顧客に確認してもらう工程。', note:'検収記録に該当する資料が見つかりません。検収書のテンプレートと控えの保存を推奨します。'},
-    {id:'s7', name:'請求', health:'ok', doc_ids:['d07'], doc_titles:['請求書_クロノス案件.pdf'],
+    {id:'s7', name:'請求', health:'ok', doc_ids:['d07'], doc_titles:['請求書_オルカ広告案件.pdf'],
       description:'請求書を発行し入金を確認する工程。'},
     {id:'s8', name:'保守', health:'thin', doc_ids:['d17'], doc_titles:['保守運用手順書.md'],
       description:'納品後の保守・障害対応を行う工程。', note:'手順書はあるが、対応履歴が蓄積されていません。'},
@@ -867,7 +897,7 @@ let DEMO_INSIGHTS = {
         evidence_titles:['業務委託契約書_雛形.docx'], suggestion:'検収書のテンプレートを作成し、案件ごとに控えをナレッジDBへ保存する運用にしましょう。'},
       {category:'bottleneck', title:'経理資料が経営グループに集中',
         detail:'単価表・請求書などの経理系資料の閲覧権限が経営グループのみに設定されており、営業が見積時に単価を確認できず質問が繰り返されています。',
-        evidence_titles:['単価表_2026.xlsx','請求書_クロノス案件.pdf'], suggestion:'単価表の閲覧権限に営業グループを追加するか、営業向けの単価早見資料を作成しましょう。'},
+        evidence_titles:['単価表_2026.xlsx','請求書_オルカ広告案件.pdf'], suggestion:'単価表の閲覧権限に営業グループを追加するか、営業向けの単価早見資料を作成しましょう。'},
       {category:'duplication', title:'議事録の保存先が2系統',
         detail:'議事録がローカル取込とGoogle Driveの両方に散在し始めています。検索精度と更新漏れの原因になります。',
         evidence_titles:['議事録_2026-06-30_定例.md','議事録_2026-07-07_MVPレビュー.md'], suggestion:'議事録の保存先をどちらか1系統に統一し、命名規則（日付_件名）を固定しましょう。'},
@@ -884,18 +914,18 @@ let DEMO_MEMBER_ANALYSIS = {
   analysis:{
     org_note:'質問の中心は労務・経理の基本ルールです。開発メンバーの質問が権限ブロックされる比率が高く、公開範囲の見直し余地があります。',
     members:[
-      {user_id:'u_kido', name:'木戸 隆正', inferred_role:'経営・案件管理の中心',
+      {user_id:'u_kido', name:'山田 太郎', inferred_role:'経営・案件管理の中心',
         summary:'見積・請求・契約など案件のお金まわりの質問が中心。全資料にアクセスできるため未回答はほぼありません。',
         gaps:['検収・納品まわりの記録'], risks:['経理系ナレッジの属人化（本人しか把握していない）'],
         suggestion:'経理系資料の要約版を営業と共有すると、確認質問が減ります。'},
-      {user_id:'u_fukuda', name:'福田 晟樹', inferred_role:'開発の実装担当',
+      {user_id:'u_fukuda', name:'鈴木 健一', inferred_role:'開発の実装担当',
         summary:'開発タスク・API設計の質問が中心。労務系（給与・経費）の質問で権限ブロックが発生しています。',
         gaps:['開発環境の構築手順書'], risks:['労務情報へアクセスできず総務への口頭確認が発生'],
         suggestion:'給与規程の公開範囲を全社にするか、要点のみのFAQを全社公開しましょう。'},
-      {user_id:'u_matsuura', name:'松浦 正醐', inferred_role:'開発（同期・インフラ担当）',
+      {user_id:'u_matsuura', name:'小林 美咲', inferred_role:'開発（同期・インフラ担当）',
         summary:'差分同期・障害対応の質問が中心。保守運用手順書をよく参照しています。',
         gaps:['過去の障害対応履歴'], risks:[], suggestion:'障害対応のたびに対応記録をナレッジへ残す運用を徹底しましょう。'},
-      {user_id:'u_ninomiya', name:'二宮 石太郎', inferred_role:'営業・顧客窓口',
+      {user_id:'u_ninomiya', name:'中村 亮', inferred_role:'営業・顧客窓口',
         summary:'見積・提案・顧客情報の質問が中心。単価表へアクセスできず見積作成時にブロックが発生しています。',
         gaps:['営業向けの単価早見資料'], risks:['単価を口頭確認しており誤った金額を提示するリスク'],
         suggestion:'単価表の閲覧権限に営業を追加するか、営業向け単価資料を整備しましょう。'},
@@ -908,14 +938,14 @@ function demoSeedAudit(){
   const seed=[
     // [daysAgo, hour, userId, query, result('ok'|'blocked'|'gap'), citedDocIds]
     [13,10,'u_fukuda','有給休暇の申請方法を教えてください','ok',['d15']],
-    [13,11,'u_ninomiya','ケアとーカーの担当者は誰？','ok',['d04']],
+    [13,11,'u_ninomiya','みどり介護の担当者は誰？','ok',['d04']],
     [12,9, 'u_fukuda','給与の締め日はいつですか？','blocked',[]],
     [12,14,'u_matsuura','障害発生時の一次報告の期限は？','ok',['d17']],
-    [11,10,'u_kido','クロノス案件の請求金額は？','ok',['d07']],
+    [11,10,'u_kido','オルカ広告案件の請求金額は？','ok',['d07']],
     [11,15,'u_ninomiya','受託開発の標準単価はいくら？','blocked',[]],
     [10,9, 'u_fukuda','経費精算の締切はいつですか？','ok',['d03']],
     [10,11,'u_matsuura','差分同期のAPI仕様は？','ok',['d12']],
-    [9, 10,'u_ninomiya','ケアとーカー案件の見積金額はいくらですか？','ok',['d06','d09']],
+    [9, 10,'u_ninomiya','みどり介護案件の見積金額はいくらですか？','ok',['d06','d09']],
     [9, 16,'u_fukuda','社用PCの購入申請はどうすればいい？','gap',[]],
     [8, 9, 'u_kido','検収期間は納品後何日？','ok',['d08']],
     [8, 13,'u_matsuura','経費精算の締切はいつですか？','ok',['d03']],
@@ -925,7 +955,7 @@ function demoSeedAudit(){
     [6, 11,'u_ninomiya','単価の値引きは誰の承認が必要？','blocked',[]],
     [6, 17,'u_matsuura','リモートワークの規定はある？','gap',[]],
     [5, 10,'u_fukuda','勤務時間は何時から？','ok',['d01']],
-    [5, 14,'u_kido','ケアとーカー案件の見積金額はいくらですか？','ok',['d06']],
+    [5, 14,'u_kido','みどり介護案件の見積金額はいくらですか？','ok',['d06']],
     [4, 9, 'u_ninomiya','契約書の雛形をください','ok',['d08']],
     [4, 11,'u_fukuda','給与の締め日はいつですか？','blocked',[]],
     [4, 16,'u_matsuura','MVPの残タスクを教えて','ok',['d11']],
@@ -933,7 +963,7 @@ function demoSeedAudit(){
     [3, 13,'u_ninomiya','慶弔休暇は何日もらえる？','gap',[]],
     [2, 9, 'u_fukuda','有給休暇の申請方法を教えてください','ok',['d15']],
     [2, 11,'u_matsuura','障害対応の再発防止はどうまとめる？','ok',['d17']],
-    [2, 15,'u_ninomiya','ケアとーカーの提案のポイントは？','ok',['d09']],
+    [2, 15,'u_ninomiya','みどり介護の提案のポイントは？','ok',['d09']],
     [1, 10,'u_kido','MVPレビューの結果は？','ok',['d14']],
     [1, 14,'u_fukuda','経費精算の締切はいつですか？','ok',['d03']],
     [1, 16,'u_ninomiya','給与の締め日はいつですか？','blocked',[]],
@@ -1139,7 +1169,7 @@ async function demoApi(url, opts){
       group_labels:user.groups.map(g=>{const gg=DEMO_GROUPS.find(x=>x.id===g);return gg?gg.label:g;})},
     templates:demoTemplates(user), ai_enabled:true,
     visible_docs:demoVisibleDocs(user).length, total_docs:DEMO_DOCS.length,
-    org_name:'合同会社nerdech',
+    org_name:'合同会社スカイテック',
   });
   if(path==='/api/logout') return mkRes(200,{});
 
@@ -1535,7 +1565,7 @@ async function showLogin(){
     <div class="login-right">
       <div class="login-card fu-s" style="--d:.08s">
         <h2>ログイン</h2>
-        <div class="field"><label>ログインID</label><input id="u" autocomplete="username" placeholder="例：kido"></div>
+        <div class="field"><label>ログインID</label><input id="u" autocomplete="username" placeholder="例：yamada"></div>
         <div class="field"><label>パスワード</label><input id="p" type="password" autocomplete="current-password" placeholder="パスワード"></div>
         <div class="lerr" id="lerr"></div>
         <button class="lbtn" id="lbtn">ログイン ${ICON.arrow}</button>
@@ -1553,7 +1583,7 @@ async function showLogin(){
     const d=await (await apiFetch('/api/demo-accounts')).json();
     document.getElementById('demoAccts').innerHTML=d.accounts.map(a=>`
       <button class="da" data-u="${esc(a.username)}" data-p="${esc(a.password)}">
-        <span class="av" style="background:${roleColor(a.username==='kido'?['g_exec']:a.username==='ninomiya'?['g_sales']:['g_dev'])}">${esc(initial(a.name))}</span>
+        <span class="av" style="background:${roleColor(a.username==='yamada'?['g_exec']:a.username==='nakamura'?['g_sales']:['g_dev'])}">${esc(initial(a.name))}</span>
         <span class="meta"><span class="nm">${esc(a.name)}</span><span class="ti">${esc(a.title)}</span></span>
         <span class="go">${ICON.arrow}</span></button>`).join('');
     document.querySelectorAll('.da').forEach(b=>b.onclick=()=>{
@@ -1595,11 +1625,6 @@ function showChat(){
   VIEW='chat'; document.querySelector('.app').classList.remove('auth'); setRail('chat');
   SHEET.innerHTML=`
     <aside class="nav" id="navAI">
-      <div class="seg">
-        <button class="on" data-seg="chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-11.8 7.7L3 21l1.9-5.7A8.4 8.4 0 1 1 21 11.5z"/></svg>Chat</button>
-        <button data-seg="cowork"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v4M16 3v4M4 9h16M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>Cowork</button>
-        <button data-seg="code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/></svg>Code</button>
-      </div>
       <div class="nav-scroll">
         <a class="nav-link" id="newSession"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>新規セッション</a>
         <a class="nav-link muted" id="lnkArtifact"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 6a2 2 0 0 1 2-2h9l5 5v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>アーティファクト</a>
@@ -1663,10 +1688,6 @@ function bindChat(){
   document.getElementById('newSession').onclick=newSession;
   document.getElementById('lnkArtifact').onclick=()=>toast('アーティファクトは後続フェーズで提供予定です');
   document.getElementById('lnkCustomize').onclick=()=>toast('カスタマイズは後続フェーズで提供予定です');
-  document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{
-    if(b.dataset.seg!=='chat'){ toast('このデモではChatのみ利用できます'); return; }
-    document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===b));
-  });
   const ta=document.getElementById('ta');
   ta.addEventListener('input',()=>{taGrow();updateSendBtn();});
   ta.addEventListener('keydown',e=>{
@@ -1960,10 +1981,10 @@ function renderAttachRow(){
    DM・グループチャット(クライアント内デモ: Discord/Teams風)
    ===================================================================== */
 const DM_PEOPLE={
-  u_kido:{name:'木戸 隆正',initials:'木',color:'#4a6cf5',on:true},
-  u_fukuda:{name:'福田 晟樹',initials:'福',color:'#22a06b',on:true},
-  u_matsuura:{name:'松浦 正醐',initials:'松',color:'#0a9ea4',on:true},
-  u_ninomiya:{name:'二宮 石太郎',initials:'二',color:'#e8703a',on:false},
+  u_kido:{name:'山田 太郎',initials:'山',color:'#4a6cf5',on:true},
+  u_fukuda:{name:'鈴木 健一',initials:'鈴',color:'#22a06b',on:true},
+  u_matsuura:{name:'小林 美咲',initials:'小',color:'#0a9ea4',on:true},
+  u_ninomiya:{name:'中村 亮',initials:'中',color:'#e8703a',on:false},
   bot:{name:'ナレッジBot',initials:'AI',color:'#5b6270',on:true},
 };
 const DM_CHANNELS=[
@@ -1987,12 +2008,12 @@ const DM_CONV={
     {u:'bot',t:'昨日 18:56',text:'補足：Google Workspace (Drive) のプッシュ通知チャネルを使うと、変更検知の遅延を数秒に短縮できます。出典: API設計メモ.md'},
   ],
   'ch-sales':[
-    {u:'u_ninomiya',t:'10:02',text:'ケアとーカーの提案書ドラフトです。フィードバックください。'},
-    {u:'u_ninomiya',t:'10:02',file:{name:'提案書_ケアとーカー.pptx',size:'56 KB',kind:'PPT'}},
+    {u:'u_ninomiya',t:'10:02',text:'みどり介護の提案書ドラフトです。フィードバックください。'},
+    {u:'u_ninomiya',t:'10:02',file:{name:'提案書_みどり介護.pptx',size:'56 KB',kind:'PPT'}},
   ],
   'grp-mvp':[
     {u:'u_kido',t:'昨日 21:10',text:'【MVP開発チーム】今週の残タスクをここにまとめます。'},
-    {u:'u_matsuura',t:'昨日 21:12',text:'・F-04 差分同期（松浦）\n・F-05 権限フィルタ（福田）\n・DM/グループUI（レビュー待ち）'},
+    {u:'u_matsuura',t:'昨日 21:12',text:'・F-04 差分同期（小林）\n・F-05 権限フィルタ（鈴木）\n・DM/グループUI（レビュー待ち）'},
   ],
 };
 function dmDmList(){
@@ -3320,41 +3341,21 @@ function bizHighlight(){
     } else line.style.opacity='';
   });
 }
+function bizStageById(id){ return ((BIZFLOW&&BIZFLOW.stages)||[]).find(s=>s.id===id); }
 function renderBizDetail(){
   const panel=document.getElementById('bizDetail');
   if(!panel) return;
-  if(!bizSelected){
-    panel.innerHTML = `<h3>詳細</h3><div class="struct-detail-empty">工程・資料のノードをクリックすると、詳細とAIが判定した資料充足度の理由が表示されます。</div>`;
+  const s=bizStageById(bizSelected);
+  if(!s){
+    panel.innerHTML = `<h3>詳細</h3><div class="struct-detail-empty">工程カードをクリックすると、AIが判定した資料充足度の理由と紐づく資料が表示されます。</div>`;
     return;
   }
-  const nd=BNODES[bizSelected];
-  if(!nd){ panel.innerHTML = `<h3>詳細</h3><div class="struct-detail-empty">ノードが見つかりません。</div>`; return; }
-  if(nd.type==='doc'){
-    const parent=BNODES[nd.parentId];
-    panel.innerHTML = `
-      <h3>詳細</h3>
-      <div class="struct-detail-title">${esc(stripExt(nd.title||''))}</div>
-      <div class="struct-detail-meta"><span class="mtag">資料</span></div>
-      <div class="struct-detail-links">
-        <h4>紐づく工程</h4>
-        <div class="struct-link-item" data-id="${esc(nd.parentId)}">
-          <span class="dot" style="background:var(--accent)"></span><span>${parent?esc(parent.stage.name):esc(nd.parentId)}</span>
-        </div>
-      </div>
-      <button class="biz-preview-btn" type="button">${ICON.doc} 原本を見る</button>`;
-    const link=panel.querySelector('.struct-link-item');
-    if(link) link.onclick=()=>{ bizSelected=nd.parentId; renderBizDetail(); bizHighlight(); };
-    const prevBtn=panel.querySelector('.biz-preview-btn');
-    if(prevBtn) prevBtn.onclick=()=>openDocPreview(nd.docId);
-    return;
-  }
-  const s=nd.stage;
   const mtagCls = s.health==='ok' ? 'mtag' : `mtag mtag-${s.health}`;
   panel.innerHTML = `
     <h3>詳細</h3>
     <div class="struct-detail-title">${esc(s.name)}</div>
     <div class="struct-detail-meta">
-      <span class="mtag">資料 ${s.doc_ids.length}件</span>
+      <span class="mtag">資料 ${(s.doc_ids||[]).length}件</span>
       <span class="${mtagCls}">${bizHealthLabel(s.health)}</span>
     </div>
     ${s.description?`<div class="struct-detail-summary">${esc(s.description)}</div>`:''}
@@ -3411,38 +3412,151 @@ function bizSetAggMode(agg){
     if(wrap) wrap.classList.remove('fading');
   }, 180);
 }
+/* 工程をフロー(flows)の順にレイヤー分けする(有向グラフの最長パス=列)。分岐しても破綻しない */
+function bizLayout(){
+  const stages=(BIZFLOW.stages)||[], flows=(BIZFLOW.flows)||[];
+  const byId={}; stages.forEach(s=>byId[s.id]=s);
+  const preds={}, outs={}, indeg={};
+  stages.forEach(s=>{ preds[s.id]=[]; outs[s.id]=[]; indeg[s.id]=0; });
+  flows.forEach(f=>{ if(byId[f.from]&&byId[f.to]){ preds[f.to].push(f.from); outs[f.from].push(f.to); indeg[f.to]++; } });
+  const indegC={}; stages.forEach(s=>indegC[s.id]=indeg[s.id]);
+  const q=stages.filter(s=>indegC[s.id]===0).map(s=>s.id);
+  const order=[];
+  while(q.length){ const id=q.shift(); order.push(id); outs[id].forEach(t=>{ if(--indegC[t]===0) q.push(t); }); }
+  stages.forEach(s=>{ if(order.indexOf(s.id)<0) order.push(s.id); }); // 循環フォールバック
+  const depth={};
+  order.forEach(id=>{ depth[id]=preds[id].length ? Math.max(...preds[id].map(p=>(depth[p]!=null?depth[p]:0)+1)) : 0; });
+  const cols={};
+  order.forEach(id=>{ const d=depth[id]||0; (cols[d]=cols[d]||[]).push(byId[id]); });
+  const maxD=Math.max(0,...Object.keys(cols).map(Number));
+  const arr=[]; for(let d=0;d<=maxD;d++) arr.push(cols[d]||[]);
+  return arr;
+}
+/* 工程カード: タブ付きの箱＋工程名＋資料充足バッジ＋資料リスト(スケッチ準拠) */
+function bizFlowCardHtml(s){
+  const nDocs=(s.doc_titles||[]).length;
+  const tabs=Math.max(1,Math.min(4,nDocs||1));
+  const docs=nDocs
+    ? s.doc_titles.map((t,i)=>`<div class="flowcard-doc" data-doc-id="${esc((s.doc_ids||[])[i]||'')}">${ICON.doc}<span>${esc(stripExt(t||''))}</span></div>`).join('')
+    : `<div class="flowcard-empty">資料なし</div>`;
+  return `<div class="flowcard health-${esc(s.health)} ${bizSelected===s.id?'sel':''}" data-id="${esc(s.id)}" tabindex="0" role="button">
+    <div class="flowcard-tabs">${'<span></span>'.repeat(tabs)}</div>
+    <div class="flowcard-head"><span class="flowcard-name">${esc(s.name)}</span><span class="flowcard-badge ${esc(s.health)}">${bizHealthLabel(s.health)}</span></div>
+    <div class="flowcard-docs">${docs}</div>
+  </div>`;
+}
+let bizResizeObs=null, bizOrderList=[];
+const BIZ_CARD_W=178, BIZ_COL_GAP=40, BIZ_PAD=28;
+/* 画面幅から1行あたりのカード数を決める(全カードが一度に見えるよう折り返す)。
+   横に入るだけ詰めて行数を最小化する */
+function bizColsPerRow(){
+  const el=document.getElementById('bizflow');
+  const w=el? el.clientWidth : 900;
+  const n=Math.floor((w-BIZ_PAD*2+BIZ_COL_GAP)/(BIZ_CARD_W+BIZ_COL_GAP));
+  return Math.max(2, Math.min(6, n||2));
+}
+/* 蛇行( boustrophedon )配置: 行ごとに左右の向きを反転し、フローを1本の連続した流れに見せる */
+function bizRelayout(){
+  const flowEl=document.getElementById('bizflow');
+  if(!flowEl || !bizOrderList.length) return;
+  const cpr=bizColsPerRow();
+  flowEl.style.gridTemplateColumns=`repeat(${cpr},${BIZ_CARD_W}px)`;
+  bizOrderList.forEach((s,i)=>{
+    const row=Math.floor(i/cpr), pir=i%cpr;
+    const col=(row%2===0)? pir : (cpr-1-pir);   // 奇数行は右→左に折り返す
+    const el=flowEl.querySelector(`.flowcard[data-id="${CSS.escape(s.id)}"]`);
+    if(el){ el.style.gridRow=String(row+1); el.style.gridColumn=String(col+1); }
+  });
+  bizDrawEdges();
+}
 function renderBizFlow(){
   const wrap=document.getElementById('bizWrap');
   if(!wrap) return;
   if(!BIZFLOW || !BIZFLOW.stages || !BIZFLOW.stages.length){ renderBizEmpty(); return; }
   const map=BIZFLOW;
+  bizOrderList=bizLayout().flat();     // フロー順に平坦化(分岐時も破綻しない)
+  bizSelected=null;
   wrap.innerHTML = `<div class="biz-page">
     <div class="biz-main">
       <div class="biz-head">
         <div class="biz-head-title"><div class="biz-title">${esc(map.title)}</div><div class="biz-sub">AIが資料から推定した業務フロー</div></div>
-        <div class="biz-head-actions">
-          <div class="mgr-toggle biz-agg-toggle">
-            <button data-agg="1" class="${BIZ_AGG?'active':''}">集約</button>
-            <button data-agg="0" class="${BIZ_AGG?'':'active'}">個別</button>
-          </div>
-          <button class="biz-regen-btn" id="bizRegenBtn">再生成</button>
-        </div>
       </div>
-      <div class="biz-canvas-wrap" id="bizCanvasWrap">
-        <svg class="biz-canvas" id="bizSvg" viewBox="0 0 ${BIZ_W} ${BIZ_H}" role="img" aria-label="業務フローグラフ"></svg>
-        <div class="biz-hint">ホイールで拡大縮小・ドラッグで移動・ダブルクリックでリセット</div>
+      <div class="bizflow-scroll">
+        <div class="bizflow" id="bizflow">
+          <svg class="bizflow-edges" id="bizEdges"></svg>
+          ${bizOrderList.map(bizFlowCardHtml).join('')}
+        </div>
       </div>
     </div>
     <div class="biz-detail fu-s" style="--d:.1s" id="bizDetail"></div>
-  </div>
-  <div class="struct-tooltip" id="bizTip"></div>`;
-  document.getElementById('bizRegenBtn').onclick=generateBizFlow;
-  document.querySelectorAll('.biz-agg-toggle button').forEach(b=>b.onclick=()=>{
-    bizSetAggMode(b.dataset.agg==='1');
-    document.querySelectorAll('.biz-agg-toggle button').forEach(x=>x.classList.toggle('active', x===b));
+  </div>`;
+  wrap.querySelectorAll('.flowcard').forEach(card=>{
+    card.addEventListener('click',e=>{
+      const docRow=e.target.closest('.flowcard-doc');
+      if(docRow){ const id=docRow.dataset.docId; if(id) openDocPreview(id); return; }
+      bizSelectStage(card.dataset.id);
+    });
+    card.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); bizSelectStage(card.dataset.id); }});
   });
-  bizSelected=null; bizHover=null;
-  bizRebuildGraph();
+  renderBizDetail();
+  const flowEl=document.getElementById('bizflow');
+  // レイアウト確定後に配置＋矢印を描く(rAF + 非アクティブタブ対策のsetTimeoutフォールバック)
+  requestAnimationFrame(()=>requestAnimationFrame(bizRelayout));
+  setTimeout(bizRelayout,60); setTimeout(bizRelayout,300);
+  if(bizResizeObs) bizResizeObs.disconnect();
+  bizResizeObs=new ResizeObserver(()=>bizRelayout());  // 幅が変われば列数を再計算
+  if(flowEl) bizResizeObs.observe(flowEl);
+}
+function bizSelectStage(id){
+  bizSelected = bizSelected===id ? null : id;
+  document.querySelectorAll('.flowcard').forEach(c=>c.classList.toggle('sel', c.dataset.id===bizSelected));
+  bizHighlightEdges();
+  renderBizDetail();
+}
+function bizHighlightEdges(){
+  document.querySelectorAll('#bizEdges .bizedge').forEach(p=>{
+    const on=bizSelected&&(p.dataset.s===bizSelected||p.dataset.t===bizSelected);
+    p.setAttribute('stroke', on?'#4a6cf5':'#C9D6EE');
+    p.setAttribute('stroke-width', on?'2.4':'1.6');
+    p.setAttribute('marker-end', on?'url(#bizArrowOn)':'url(#bizArrow)');
+    p.setAttribute('opacity', bizSelected?(on?'1':'0.3'):'1');
+  });
+}
+/* 工程カードの縁どうしを矢印(3次ベジェ)で結ぶ。位置はレイアウト後のoffsetから算出 */
+function bizDrawEdges(){
+  const flowEl=document.getElementById('bizflow');
+  const svg=document.getElementById('bizEdges');
+  if(!flowEl||!svg) return;
+  const W=flowEl.scrollWidth, H=flowEl.scrollHeight;
+  svg.setAttribute('width',W); svg.setAttribute('height',H); svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const box=id=>{ const el=flowEl.querySelector(`.flowcard[data-id="${id}"]`); if(!el) return null;
+    return {x:el.offsetLeft,y:el.offsetTop,w:el.offsetWidth,h:el.offsetHeight}; };
+  const mk=(id,col)=>`<marker id="${id}" markerWidth="10" markerHeight="10" refX="7" refY="4.5" orient="auto"><path d="M1.5,1.5 L8,4.5 L1.5,7.5" fill="none" stroke="${col}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></marker>`;
+  let out=`<defs>${mk('bizArrow','#C9D6EE')}${mk('bizArrowOn','#4a6cf5')}</defs>`;
+  ((BIZFLOW.flows)||[]).forEach(f=>{
+    const a=box(f.from), b=box(f.to); if(!a||!b) return;
+    const acx=a.x+a.w/2, acy=a.y+a.h/2, bcx=b.x+b.w/2, bcy=b.y+b.h/2;
+    const dx=bcx-acx, dy=bcy-acy;
+    let x1,y1,x2,y2,c1x,c1y,c2x,c2y;
+    if(Math.abs(dy) > a.h*0.55){
+      // 縦(行の折り返し): カードの下端→次カードの上端(向きに応じて反転)
+      const down=dy>0;
+      x1=acx; y1=down? a.y+a.h : a.y;
+      x2=bcx; y2=down? b.y : b.y+b.h;
+      const k=Math.max(24,Math.abs(y2-y1)/2);
+      c1x=x1; c1y=y1+(down?k:-k); c2x=x2; c2y=y2-(down?k:-k);
+    }else{
+      // 横: カードの左右端どうしを結ぶ(蛇行で右向き/左向きどちらも対応)
+      const right=dx>=0;
+      x1=right? a.x+a.w : a.x; y1=acy;
+      x2=right? b.x : b.x+b.w; y2=bcy;
+      const k=Math.max(26,Math.abs(x2-x1)/2);
+      c1x=x1+(right?k:-k); c1y=y1; c2x=x2-(right?k:-k); c2y=y2;
+    }
+    out+=`<path class="bizedge" data-s="${esc(f.from)}" data-t="${esc(f.to)}" d="M${x1},${y1} C${c1x},${c1y} ${c2x},${c2y} ${x2},${y2}" fill="none" stroke="#C9D6EE" stroke-width="1.6" marker-end="url(#bizArrow)"/>`;
+  });
+  svg.innerHTML=out;
+  bizHighlightEdges();
 }
 async function generateBizFlow(){
   renderBizLoading();
